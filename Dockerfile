@@ -17,7 +17,7 @@ RUN go build -o taskgo ./cmd/main.go
 # Stage 2: Create the final lightweight image
 FROM alpine:latest
 
-WORKDIR /root/
+WORKDIR /app
 
 # Copy the built binary from the builder stage
 COPY --from=builder /app/taskgo .
