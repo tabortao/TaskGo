@@ -2,7 +2,9 @@
 
 TaskGo 是一个使用 Go 语言和 Gin 框架构建的现代化、轻量级的任务管理系统。它采用 SQLite 数据库，无需复杂配置，并提供了一个简洁、用户友好的响应式 Web 界面。项目支持 PWA 特性，可以方便地“安装”到桌面或手机主屏幕，像原生应用一样使用。
 
-![](./assets/img/UI.jpg)
+![](./assets/img/UI.png)
+
+![](./assets/img/UI-M.png)
 
 ## ✨ 主要功能
 

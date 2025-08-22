@@ -34,9 +34,9 @@ jobs:
         id: set_name
         run: |
           if [ "${{ matrix.goos }}" == "windows" ]; then
-            echo "exe_name=TaskGo.exe" >> $GITHUB_ENV
+            echo "exe_name=taskgo.exe" >> $GITHUB_ENV
           else
-            echo "exe_name=TaskGo" >> $GITHUB_ENV
+            echo "exe_name=taskgo" >> $GITHUB_ENV
           fi
 
       - name: Build Go Binary
