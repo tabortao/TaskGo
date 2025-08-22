@@ -1,8 +1,9 @@
-version: '3.8'
 services:
   taskgo:
-    build: .
+    image: tabortoa/taskgo:latest #国内用户镜像加速 dk.nastool.de/tabortoa/taskgo
+    restart: always
     ports:
-      - "8080:8080"
+      - "21280:8080"
     volumes:
-      - ./taskgo_data:/root
+      - ./taskgo_data/taskgo.db:/app/taskgo.db
+      - ./taskgo_data/avatars:/app/web/static/avatars
