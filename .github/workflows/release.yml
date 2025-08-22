@@ -1,0 +1,77 @@
+# .github/workflows/release.yml
+
+name: Release Go Binaries
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: '发布版本标签 (例如: v1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Determine Release Tag
+        id: get_tag
+        run: |
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            echo "RELEASE_TAG=${{ github.ref_name }}" >> $GITHUB_ENV
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "RELEASE_TAG=${{ github.event.inputs.release_tag }}" >> $GITHUB_ENV
+          fi
+
+      - name: Set output executable name
+        id: set_name
+        run: |
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            echo "exe_name=TaskGo.exe" >> $GITHUB_ENV
+          else
+            echo "exe_name=TaskGo" >> $GITHUB_ENV
+          fi
+
+      - name: Build Go Binary
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o ${{ env.exe_name }} ./cmd/main.go
+
+      - name: Package files
+        run: |
+          mkdir release_package
+          mv ${{ env.exe_name }} release_package/
+          cp -r web release_package/
+          if [ "${{ matrix.goos }}" == "windows" ]; then
+            zip -r TaskGo-${{ matrix.goos }}-${{ matrix.goarch }}.zip release_package
+            echo "ASSET_NAME=TaskGo-${{ matrix.goos }}-${{ matrix.goarch }}.zip" >> $GITHUB_ENV
+          else
+            tar -czvf TaskGo-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz release_package
+            echo "ASSET_NAME=TaskGo-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz" >> $GITHUB_ENV
+          fi
+          
+      - name: Create Release and Upload Asset
+        uses: softprops/action-gh-release@v2 # Updated to v2
+        with:
+          files: ${{ env.ASSET_NAME }}
+          tag_name: ${{ env.RELEASE_TAG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

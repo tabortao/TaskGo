@@ -101,6 +101,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sidebar toggle listener
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebar-toggle-btn');
+    const mobileTagsToggleBtn = document.getElementById('mobile-tags-toggle-btn');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
 
     // Check for saved state or mobile view
     if (window.innerWidth <= 768) {
@@ -114,10 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
     });
 
-    // Mobile tags toggle listener
-    const mobileTagsToggleBtn = document.getElementById('mobile-tags-toggle-btn');
     mobileTagsToggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('collapsed');
+        sidebar.classList.remove('collapsed');
+    });
+
+    sidebarOverlay.addEventListener('click', () => {
+        sidebar.classList.add('collapsed');
     });
 
     // --- Collapsible Task Sections Logic ---
