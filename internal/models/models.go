@@ -4,8 +4,9 @@ import "gorm.io/gorm"
 
 type User struct {
 	gorm.Model
-	Username string `gorm:"unique" json:"username"`
-	Password string `json:"password"`
+	Username  string `gorm:"unique" json:"username"`
+	Password  string `json:"password"`
+	AvatarURL string `json:"avatar_url"`
 }
 
 type Task struct {

@@ -1,12 +1,14 @@
 package router
 
 import (
-	"github.com/gin-gonic/gin"
 	"taskgo/internal/handlers"
 	"taskgo/internal/middleware"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
 	r.Static("/static", "./web/static")
@@ -18,16 +20,20 @@ func SetupRouter() *gin.Engine {
 
 	api := r.Group("/api")
 	{
-		api.POST("/register", handlers.Register)
-		api.POST("/login", handlers.Login)
+		api.POST("/register", handlers.Register(db))
+		api.POST("/login", handlers.Login(db))
 
 		authed := api.Group("/")
 		authed.Use(middleware.AuthMiddleware())
 		{
-			authed.POST("/tasks", handlers.CreateTask)
-			authed.GET("/tasks", handlers.GetTasks)
-			authed.PUT("/tasks/:id", handlers.UpdateTask)
-			authed.DELETE("/tasks/:id", handlers.DeleteTask)
+			authed.GET("/user", handlers.GetUser(db))
+			authed.PUT("/user/password", handlers.UpdatePassword(db))
+			authed.POST("/user/avatar", handlers.UploadAvatar(db))
+
+			authed.POST("/tasks", handlers.CreateTask(db))
+			authed.GET("/tasks", handlers.GetTasks(db))
+			authed.PUT("/tasks/:id", handlers.UpdateTask(db))
+			authed.DELETE("/tasks/:id", handlers.DeleteTask(db))
 		}
 	}
 

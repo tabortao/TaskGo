@@ -52,7 +52,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Auth form submissions
     document.getElementById('register-form').addEventListener('submit', handleRegister);
     document.getElementById('login-form').addEventListener('submit', handleLogin);
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    document.getElementById('logout-link').addEventListener('click', handleLogout);
+
+    // User profile interactions
+    document.getElementById('user-profile').addEventListener('click', () => {
+        const menu = document.getElementById('user-menu');
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Settings Modal
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsBtn = document.getElementById('settings-btn');
+    const closeBtn = settingsModal.querySelector('.close-btn');
+
+    settingsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        settingsModal.style.display = 'flex';
+    });
+
+    closeBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target == settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    });
+
+    document.getElementById('avatar-form').addEventListener('submit', handleAvatarUpload);
+    document.getElementById('password-form').addEventListener('submit', handlePasswordChange);
 
     // Task form submission
     document.getElementById('task-form').addEventListener('submit', handleCreateTask);
@@ -95,11 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const todoSection = document.getElementById('todo-section');
     const completedSection = document.getElementById('completed-section');
 
-    // Check local storage for saved states
+    // Set initial states based on localStorage or defaults
     if (localStorage.getItem('todo-collapsed') === 'true') {
         todoSection.classList.add('collapsed');
+    } else {
+        todoSection.classList.remove('collapsed');
     }
-    if (localStorage.getItem('completed-collapsed') === 'true') {
+
+    if (localStorage.getItem('completed-collapsed') === 'false') {
+        completedSection.classList.remove('collapsed');
+    } else {
         completedSection.classList.add('collapsed');
     }
 
@@ -178,7 +212,28 @@ function showAuth() {
 function showApp() {
     document.getElementById('auth-container').style.display = 'none';
     document.getElementById('app-container').style.display = 'flex';
+    loadUser();
     loadTasks();
+}
+
+async function loadUser() {
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/user', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+        const { data } = await res.json();
+        document.getElementById('username-display').textContent = data.username;
+        const avatar = document.getElementById('user-avatar');
+        if (data.avatar_url) {
+            avatar.src = data.avatar_url;
+        } else {
+            avatar.src = '/static/icons/avatar.png';
+        }
+    } else {
+        handleLogout(); // Token might be expired
+    }
 }
 
 async function handleRegister(e) {
@@ -213,8 +268,15 @@ async function handleLogin(e) {
     });
 
     if (res.ok) {
-        const { token } = await res.json();
+        const { token, user } = await res.json();
         localStorage.setItem('token', token);
+        document.getElementById('username-display').textContent = user.username;
+        const avatar = document.getElementById('user-avatar');
+        if (user.avatar_url) {
+            avatar.src = user.avatar_url;
+        } else {
+            avatar.src = '/static/icons/avatar.png';
+        }
         showApp();
     } else {
         alert('Invalid credentials');
@@ -227,6 +289,70 @@ function handleLogout() {
     currentTagFilter = null;
     showAuth();
 }
+
+async function handleAvatarUpload(e) {
+    e.preventDefault();
+    const avatarInput = document.getElementById('avatar-input');
+    const file = avatarInput.files[0];
+
+    if (!file) {
+        alert('Please select a file.');
+        return;
+    }
+
+    if (file.size > 1 * 1024 * 1024) { // 1MB
+        alert('File size must be less than 1MB.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/user/avatar', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        },
+        body: formData
+    });
+
+    if (res.ok) {
+        const { data } = await res.json();
+        document.getElementById('user-avatar').src = data.avatar_url;
+        alert('Avatar updated successfully!');
+        document.getElementById('settings-modal').style.display = 'none';
+    } else {
+        const { error } = await res.json();
+        alert(`Error: ${error}`);
+    }
+}
+
+async function handlePasswordChange(e) {
+    e.preventDefault();
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+
+    const token = localStorage.getItem('token');
+    const res = await fetch('/api/user/password', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+    });
+
+    if (res.ok) {
+        alert('Password updated successfully!');
+        document.getElementById('password-form').reset();
+        document.getElementById('settings-modal').style.display = 'none';
+    } else {
+        const { error } = await res.json();
+        alert(`Error: ${error}`);
+    }
+}
+
 
 async function loadTasks() {
     const token = localStorage.getItem('token');
