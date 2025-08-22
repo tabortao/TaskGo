@@ -1,9 +1,11 @@
 services:
   taskgo:
-    image: tabortoa/taskgo:latest #国内用户镜像加速 dk.nastool.de/tabortoa/taskgo
+    image: tabortoa/taskgo #国内用户镜像加速 dk.nastool.de/tabortoa/taskgo
     restart: always
     ports:
       - "21280:8080"
+    environment:
+      - DATABASE_PATH=/app/db/taskgo.db
     volumes:
-      - ./taskgo_data/taskgo.db:/app/taskgo.db
+      - ./taskgo_data/db:/app/db
       - ./taskgo_data/avatars:/app/web/static/avatars

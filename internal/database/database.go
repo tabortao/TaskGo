@@ -2,6 +2,8 @@ package database
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/glebarez/sqlite" // Pure go
 	"gorm.io/gorm"
 	"taskgo/internal/models"
@@ -10,7 +12,12 @@ import (
 var DB *gorm.DB
 
 func ConnectDatabase() {
-	database, err := gorm.Open(sqlite.Open("taskgo.db"), &gorm.Config{})
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = "taskgo.db"
+	}
+
+	database, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to connect to database: %v", err))
 	}

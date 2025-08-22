@@ -38,7 +38,7 @@ TaskGo 是一个使用 Go 语言和 Gin 框架构建的现代化、轻量级的�
 
 在开始之前，请确保您的本地环境已经安装了以下工具：
 
-- [Go](https://golang.org/dl/) (版本 1.21 或更高)
+- [Go](https://golang.org/dl/) (版本 1.24 或更高)
 - [Docker](https://www.docker.com/get-started) 和 [Docker Compose](https://docs.docker.com/compose/install/)
 
 ---
