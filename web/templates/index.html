@@ -187,10 +187,11 @@
                     <!-- 桌面端任务输入框 -->
                     <form id="task-form" class="mb-6 hidden lg:block">
                         <div class="relative">
-                            <input type="text" id="task-input" placeholder="What needs to be done?" 
-                                   class="w-full px-4 py-3 bg-surface border border-border rounded-lg
+                            <textarea id="task-input" placeholder="#tag1 #tag2 New task..." 
+                                   class="w-full px-4 py-3 bg-surface border border-border rounded-lg resize-none overflow-hidden min-h-[48px] max-h-[200px]
                                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                                   autocomplete="off">
+                                   rows="1"
+                                   autocomplete="off"></textarea>
                             <button type="submit" class="absolute right-3 top-2.5 text-primary hover:text-primary/90">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -203,10 +204,11 @@
                     <!-- 移动端任务输入框（固定在底部） -->
                     <form id="mobile-task-form" class="fixed bottom-0 left-0 right-0 p-3 bg-surface border-t border-border shadow-lg lg:hidden z-30">
                         <div class="relative max-w-screen-xl mx-auto">
-                            <input type="text" id="mobile-task-input" placeholder="What needs to be done?" 
-                                   class="w-full px-4 py-3 bg-background border border-border rounded-lg
+                            <textarea id="mobile-task-input" placeholder="What needs to be done?" 
+                                   class="w-full px-4 py-3 bg-background border border-border rounded-lg resize-none overflow-hidden min-h-[48px] max-h-[200px]
                                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                                   autocomplete="off">
+                                   rows="1"
+                                   autocomplete="off"></textarea>
                             <button type="submit" class="absolute right-3 top-2.5 text-primary hover:text-primary/90">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -233,8 +235,8 @@
                                     </svg>
                                 </button>
                             </div>
-                            <div class="divide-y divide-border/50 task-content">
-                                <ul id="todo-list" class="divide-y divide-border/50 min-h-[10rem]"></ul>
+                            <div class="task-content">
+                                <ul id="todo-list" class="min-h-[10rem] p-2"></ul>
                             </div>
                         </section>
 
@@ -253,8 +255,8 @@
                                     </svg>
                                 </button>
                             </div>
-                            <div class="divide-y divide-border/50 task-content">
-                                <ul id="completed-list" class="divide-y divide-border/50"></ul>
+                            <div class="task-content">
+                                <ul id="completed-list" class="p-2"></ul>
                             </div>
                             <div class="p-4 bg-background/50 border-t border-border task-content">
                                 <button id="show-more-btn" class="hidden w-full py-2 text-sm text-secondary hover:text-primary focus:outline-none transition-colors">
@@ -265,6 +267,54 @@
                     </div>
                 </div>
             </main>
+        </div>
+    </div>
+
+    <!-- 标签操作菜单 -->
+    <div id="tag-menu" class="hidden fixed z-50">
+        <div class="bg-surface rounded-lg shadow-lg border border-border w-48 py-1">
+            <button id="edit-tag-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Edit Tag</span>
+            </button>
+            <button id="delete-tag-btn" class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-background flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Delete Tag</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 标签编辑模态框 -->
+    <div id="edit-tag-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div class="bg-surface rounded-lg shadow-xl max-w-sm w-full p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-medium">Edit Tag</h2>
+                <button class="close-modal-btn text-secondary hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="edit-tag-form" class="space-y-4">
+                <div>
+                    <input type="text" id="edit-tag-input" placeholder="Enter new tag name" required
+                           class="w-full px-4 py-2 bg-background border border-border rounded-lg
+                                  focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                </div>
+                <div class="flex space-x-3">
+                    <button type="submit"
+                            class="flex-1 bg-primary text-white py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                        Save
+                    </button>
+                    <button type="button" class="close-modal-btn flex-1 bg-background border border-border text-secondary py-2 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 

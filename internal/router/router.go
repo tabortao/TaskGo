@@ -32,8 +32,10 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 			authed.POST("/tasks", handlers.CreateTask(db))
 			authed.GET("/tasks", handlers.GetTasks(db))
+			authed.GET("/tasks/:id", handlers.GetTask(db))
 			authed.PUT("/tasks/:id", handlers.UpdateTask(db))
 			authed.DELETE("/tasks/:id", handlers.DeleteTask(db))
+			authed.POST("/tasks/update-tags", handlers.UpdateTagForAllTasks(db))
 		}
 	}
 

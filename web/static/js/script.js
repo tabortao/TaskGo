@@ -220,6 +220,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const autocompleteContainer = document.getElementById('tag-autocomplete-container');
     const mobileAutocompleteContainer = document.getElementById('mobile-tag-autocomplete-container');
 
+    // 自动调整输入框高度的函数
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = 'auto'; // 重置高度
+        textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'; // 设置新高度，最大200px
+    }
+
+    // 为两个输入框添加自动调整高度的功能
+    [taskInput, mobileTaskInput].forEach(textarea => {
+        // 初始化高度
+        autoResizeTextarea(textarea);
+        
+        // 监听输入事件
+        textarea.addEventListener('input', () => {
+            autoResizeTextarea(textarea);
+        });
+    });
+
     function handleTagAutocomplete(input, container) {
         const cursorPos = input.selectionStart;
         const textBeforeCursor = input.value.substring(0, cursorPos);
@@ -255,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tags.forEach(tag => {
             const div = document.createElement('div');
             div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-            div.textContent = `#${tag}`;
+            div.textContent = tag;
             div.addEventListener('mousedown', (e) => {
                 e.preventDefault(); // Prevent input from losing focus
                 const textBeforeCursor = input.value.substring(0, input.selectionStart);
@@ -528,7 +545,7 @@ function renderTags() {
         // Add tag text
         const tagText = document.createElement('span');
         tagText.className = 'tag-text';
-        tagText.textContent = `#${tag}`;
+        tagText.textContent = tag;
         
         content.appendChild(tagIcon);
         content.appendChild(tagText);
@@ -551,6 +568,195 @@ function renderTags() {
 }
 
 // UPDATED: Now filters tasks, handles pagination for completed tasks
+// 标签操作相关变量
+let currentTag = null;
+const tagMenu = document.getElementById('tag-menu');
+const editTagBtn = document.getElementById('edit-tag-btn');
+const deleteTagBtn = document.getElementById('delete-tag-btn');
+const editTagModal = document.getElementById('edit-tag-modal');
+const editTagForm = document.getElementById('edit-tag-form');
+const editTagInput = document.getElementById('edit-tag-input');
+
+// 全局变量，用于存储当前操作的任务ID
+let currentTaskId = null;
+
+// 处理标签点击事件
+function handleTagClick(event, tagText, taskId) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // 存储当前操作的任务ID
+    currentTaskId = taskId;
+    
+    // 确保 tagText 是干净的标签文本，不包含 # 号
+    currentTag = tagText.startsWith('#') ? tagText.substring(1) : tagText;
+    
+    // 定位菜单，考虑滚动位置
+    const rect = event.target.getBoundingClientRect();
+    const scrollY = window.scrollY || document.documentElement.scrollTop;
+    const scrollX = window.scrollX || document.documentElement.scrollLeft;
+    
+    tagMenu.style.top = `${rect.bottom + scrollY + 5}px`;
+    tagMenu.style.left = `${rect.left + scrollX}px`;
+    tagMenu.classList.remove('hidden');
+    
+    // 添加点击其他地方关闭菜单的一次性事件监听
+    setTimeout(() => {
+        const closeMenu = (e) => {
+            if (!tagMenu.contains(e.target) && !e.target.closest('.task-tag')) {
+                tagMenu.classList.add('hidden');
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        document.addEventListener('click', closeMenu);
+    }, 0);
+}
+
+// 关闭标签菜单
+function closeTagMenu() {
+    tagMenu.classList.add('hidden');
+}
+
+// 显示编辑标签模态框
+function showEditTagModal() {
+    editTagInput.value = currentTag.replace('#', '');
+    editTagModal.classList.remove('hidden');
+    editTagInput.focus();
+}
+
+// 关闭编辑标签模态框
+function closeEditTagModal() {
+    editTagModal.classList.add('hidden');
+    currentTag = null;
+}
+
+// 初始化标签操作事件监听
+document.addEventListener('DOMContentLoaded', () => {
+    // 点击其他地方关闭标签菜单
+    document.addEventListener('click', (event) => {
+        if (!tagMenu.contains(event.target) && !event.target.closest('.task-tag')) {
+            closeTagMenu();
+        }
+    });
+
+    // 编辑标签按钮点击事件
+    editTagBtn.addEventListener('click', () => {
+        closeTagMenu();
+        showEditTagModal();
+    });
+
+    // 删除标签按钮点击事件
+    deleteTagBtn.addEventListener('click', async () => {
+        if (confirm('确定要删除这个标签吗？')) {
+            try {
+                if (!currentTaskId) {
+                    throw new Error('无法找到对应的任务');
+                }
+                
+                const task = allTasks.find(t => t.ID === currentTaskId);
+                if (!task) {
+                    throw new Error('无法找到对应的任务数据');
+                }
+
+                // 从当前任务中移除该标签
+                const taskTags = task.tags
+                    .split(',')
+                    .map(t => t.trim())  // 清理空格
+                    .filter(t => t !== '' && t !== currentTag); // 移除空标签和目标标签
+                
+                // 获取任务的当前状态
+                const currentResponse = await fetch(`/api/tasks/${currentTaskId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                if (!currentResponse.ok) {
+                    throw new Error('获取任务数据失败');
+                }
+
+                const currentTaskRes = await currentResponse.json();
+                // 兼容后端返回 { data: { ...task } } 或直接返回任务对象
+                const currentTask = currentTaskRes.data ? currentTaskRes.data : currentTaskRes;
+                // 更新标签，保持其他字段不变
+                const payload = {
+                    tags: taskTags.join(',') || ''  // 只更新标签字段
+                };
+
+                const response = await fetch(`/api/tasks/${currentTaskId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '更新任务标签失败');
+                }
+
+                // 等待后端更新成功后，重新加载任务列表以确保数据同步
+                await loadTasks();
+
+                // 重新渲染UI
+                renderTags();
+                renderTasks();
+            } catch (error) {
+                console.error('删除标签错误:', error);
+                alert(error.message);
+            }
+        }
+        closeTagMenu();
+    });
+
+    // 编辑标签表单提交
+    editTagForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const newTagText = editTagInput.value.trim();
+        
+        if (newTagText && newTagText !== currentTag) {
+            try {
+                // 更新所有任务中的标签
+                allTasks = allTasks.map(task => {
+                    if (!task.tags) return task;
+                    const taskTags = task.tags.split(',').map(tag => tag === currentTag ? newTagText : tag);
+                    return {
+                        ...task,
+                        tags: taskTags.join(',')
+                    };
+                });
+
+                // 更新后端数据
+                await fetch('/api/tasks/update-tags', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({ 
+                        oldTag: currentTag,
+                        newTag: newTagText,
+                        action: 'update'
+                    })
+                });
+
+                renderTags();
+                renderTasks();
+            } catch (error) {
+                console.error('Error updating tag:', error);
+            }
+        }
+        closeEditTagModal();
+    });
+
+    // 关闭模态框按钮
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', closeEditTagModal);
+    });
+});
+
 function renderTasks() {
     const todoList = document.getElementById('todo-list');
     const completedList = document.getElementById('completed-list');
@@ -624,34 +830,51 @@ function renderTasks() {
 function createTaskElement(task) {
     const taskEl = document.createElement('li');
     taskEl.dataset.id = task.ID;
-    taskEl.className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''}`;
+    taskEl.className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-2 border border-border/50 rounded-lg`;
 
     // Checkbox container
     const checkboxContainer = document.createElement('div');
     checkboxContainer.className = 'flex items-start space-x-3';
 
-    // Custom checkbox
+    // 添加相对定位以支持删除按钮的绝对定位
+    taskEl.style.position = 'relative';
+
+    // Custom checkbox with improved click area
     const checkboxWrapper = document.createElement('div');
-    checkboxWrapper.className = 'relative flex-shrink-0 mt-1';
+    checkboxWrapper.className = 'relative flex-shrink-0 mt-1 cursor-pointer';
     
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = task.completed;
-    checkbox.className = 'peer absolute opacity-0 w-5 h-5 cursor-pointer';
-    checkbox.addEventListener('change', () => toggleTaskCompletion(task.ID, !task.completed));
-
+    checkbox.className = 'peer absolute inset-0 opacity-0 w-6 h-6 cursor-pointer z-10';
+    
+    // 扩展点击区域
+    const hitArea = document.createElement('div');
+    hitArea.className = 'absolute -inset-1 z-0';
+    
     const checkboxCustom = document.createElement('div');
-    checkboxCustom.className = `w-5 h-5 border-2 rounded-md border-border peer-checked:border-success peer-checked:bg-success
-                               flex items-center justify-center transition-colors peer-hover:border-success/50`;
+    checkboxCustom.className = `w-6 h-6 border-2 rounded-md border-border peer-checked:border-success peer-checked:bg-success
+                               flex items-center justify-center transition-colors group-hover:border-success/50
+                               relative`;
     
     const checkIcon = document.createElement('svg');
-    checkIcon.className = 'w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity';
+    checkIcon.className = 'w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity';
     checkIcon.setAttribute('fill', 'none');
     checkIcon.setAttribute('stroke', 'currentColor');
     checkIcon.setAttribute('viewBox', '0 0 24 24');
-    checkIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />';
+    checkIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />';
+    
+    // 添加统一的点击事件处理
+    const handleClick = () => toggleTaskCompletion(task.ID, !task.completed);
+    checkbox.addEventListener('change', handleClick);
+    checkboxWrapper.addEventListener('click', (e) => {
+        // 防止事件冒泡，避免触发其他点击事件
+        e.stopPropagation();
+        handleClick();
+    });
     
     checkboxCustom.appendChild(checkIcon);
+    checkboxWrapper.appendChild(hitArea);
     checkboxWrapper.appendChild(checkbox);
     checkboxWrapper.appendChild(checkboxCustom);
 
@@ -693,12 +916,24 @@ function createTaskElement(task) {
         
         task.tags.split(',').forEach(tag => {
             if (!tag) return;
+            if (!tag.trim()) return; // 跳过空标签
             const tagEl = document.createElement('span');
             const tagColor = getTagColor(tag);
-            tagEl.className = 'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium';
-            tagEl.style.backgroundColor = `${tagColor}20`; // 20 is hex for 12% opacity
+            tagEl.className = 'task-tag inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium cursor-pointer transition-colors';
+            tagEl.style.backgroundColor = `${tagColor}20`;
             tagEl.style.color = tagColor;
-            tagEl.textContent = `#${tag}`;
+            
+            // 添加hover效果
+            tagEl.addEventListener('mouseenter', () => {
+                tagEl.style.backgroundColor = `${tagColor}30`;
+            });
+            tagEl.addEventListener('mouseleave', () => {
+                tagEl.style.backgroundColor = `${tagColor}20`;
+            });
+            
+            // 添加点击事件，注意这里不要加 # 前缀，但要传入任务ID
+            tagEl.addEventListener('click', (e) => handleTagClick(e, tag.trim(), task.ID));
+            tagEl.textContent = tag.trim();
             tagsContainer.appendChild(tagEl);
         });
         
@@ -712,7 +947,7 @@ function createTaskElement(task) {
 
     // Delete button
     const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'ml-2 text-secondary opacity-0 group-hover:opacity-100 hover:text-red-500 focus:opacity-100 transition-opacity';
+    deleteBtn.className = 'absolute right-4 top-4 text-secondary opacity-0 group-hover:opacity-100 hover:text-red-500 focus:opacity-100 transition-opacity';
     deleteBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>`;
@@ -763,7 +998,9 @@ async function toggleTaskCompletion(id, completed) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ completed })
+        body: JSON.stringify({
+            completed: Boolean(completed)  // 确保是布尔值
+        })
     });
 
     if (res.ok) {
@@ -800,15 +1037,31 @@ async function deleteTask(id) {
 
 function editTaskContent(span, id) {
     const currentContent = span.textContent;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentContent;
-    input.className = 'content-edit'; // For styling if needed
-    span.parentElement.replaceChild(input, span);
-    input.focus();
+    
+    // 创建textarea替代input
+    const textarea = document.createElement('textarea');
+    textarea.value = currentContent;
+    textarea.className = 'w-full px-2 py-1 bg-background border border-border rounded resize-none overflow-hidden focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[24px]';
+    textarea.style.height = 'auto'; // 重置高度
+    
+    // 替换原有元素
+    span.parentElement.replaceChild(textarea, span);
+    textarea.focus();
+
+    // 自动调整高度
+    function autoResize() {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+    }
+    
+    // 初始调整高度
+    autoResize();
+    
+    // 监听输入事件调整高度
+    textarea.addEventListener('input', autoResize);
 
     const saveChanges = async () => {
-        const newContent = input.value.trim();
+        const newContent = textarea.value.trim();
         if (newContent && newContent !== currentContent) {
             const token = localStorage.getItem('token');
             const res = await fetch(`/api/tasks/${id}`, {
@@ -826,13 +1079,16 @@ function editTaskContent(span, id) {
         loadTasks(); // Always reload to ensure data consistency
     };
 
-    input.addEventListener('blur', saveChanges);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            input.blur();
+    textarea.addEventListener('blur', saveChanges);
+    
+    // 处理键盘事件
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+            // Ctrl+Enter 保存更改
+            textarea.blur();
         } else if (e.key === 'Escape') {
-            input.value = currentContent; // Revert changes
-            input.blur();
+            textarea.value = currentContent; // 还原更改
+            textarea.blur();
         }
     });
 }

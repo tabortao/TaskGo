@@ -3,12 +3,84 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"taskgo/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+// UpdateTagForAllTasks 批量更新所有任务的某个标签
+func UpdateTagForAllTasks(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var req struct {
+			OldTag string `json:"oldTag"`
+			NewTag string `json:"newTag"`
+			Action string `json:"action"`
+		}
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		if req.Action != "update" || req.OldTag == "" || req.NewTag == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "参数错误"})
+			return
+		}
+		userID, _ := c.Get("userID")
+		var tasks []models.Task
+		db.Where("user_id = ?", userID).Find(&tasks)
+		for _, task := range tasks {
+			if task.Tags == "" {
+				continue
+			}
+			tags := []string{}
+			changed := false
+			for _, tag := range splitTags(task.Tags) {
+				if tag == req.OldTag {
+					tags = append(tags, req.NewTag)
+					changed = true
+				} else {
+					tags = append(tags, tag)
+				}
+			}
+			if changed {
+				db.Model(&task).Update("tags", joinTags(tags))
+			}
+		}
+		c.JSON(http.StatusOK, gin.H{"message": "标签批量更新成功"})
+	}
+}
+
+func splitTags(tags string) []string {
+	res := []string{}
+	for _, t := range strings.Split(tags, ",") {
+		tt := strings.TrimSpace(t)
+		if tt != "" {
+			res = append(res, tt)
+		}
+	}
+	return res
+}
+func joinTags(tags []string) string {
+	return strings.Join(tags, ",")
+}
+
+// GetTask 获取单个任务详情
+func GetTask(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var task models.Task
+		userID, _ := c.Get("userID")
+		id, _ := strconv.Atoi(c.Param("id"))
+
+		if err := db.Where("id = ? AND user_id = ?", id, userID).First(&task).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"data": task})
+	}
+}
 
 func CreateTask(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -48,13 +120,30 @@ func UpdateTask(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		var input models.Task
+		var input map[string]interface{}
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 
-		db.Model(&task).Updates(input)
+		// 只允许更新部分字段
+		allowed := map[string]bool{"content": true, "tags": true, "completed": true}
+		updateFields := make(map[string]interface{})
+		for k, v := range input {
+			if allowed[k] {
+				updateFields[k] = v
+			}
+		}
+
+		if len(updateFields) == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No valid fields to update"})
+			return
+		}
+
+		if err := db.Model(&task).Updates(updateFields).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update task"})
+			return
+		}
 		c.JSON(http.StatusOK, gin.H{"data": task})
 	}
 }
