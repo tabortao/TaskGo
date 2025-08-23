@@ -83,8 +83,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('avatar-form').addEventListener('submit', handleAvatarUpload);
     document.getElementById('password-form').addEventListener('submit', handlePasswordChange);
 
-    // Task form submission
+    // Task form submission for both desktop and mobile
     document.getElementById('task-form').addEventListener('submit', handleCreateTask);
+    document.getElementById('mobile-task-form').addEventListener('submit', handleCreateTask);
 
     // Search input listener
     document.getElementById('search-input').addEventListener('input', (e) => {
@@ -100,28 +101,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sidebar toggle listener
     const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebar-toggle-btn');
-    const mobileTagsToggleBtn = document.getElementById('mobile-tags-toggle-btn');
+    const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
+    const mobileSidebarToggleBtn = document.getElementById('mobile-sidebar-toggle');
+    const desktopSidebarToggleBtn = document.getElementById('desktop-sidebar-toggle');
     const sidebarOverlay = document.querySelector('.sidebar-overlay');
 
     // Check for saved state or mobile view
-    if (window.innerWidth <= 768) {
+    const mainContent = document.querySelector('.sidebar-adjusted');
+    const isInitiallyCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+    
+    if (window.innerWidth < 1024) { // 移动端和平板
         sidebar.classList.add('collapsed');
-    } else if (localStorage.getItem('sidebar-collapsed') === 'true') {
+        sidebar.style.transform = 'translateX(-100%)';
+        sidebarOverlay.classList.add('hidden');
+    } else if (isInitiallyCollapsed) { // 桌面端
         sidebar.classList.add('collapsed');
+        if (window.innerWidth >= 1024) { // lg breakpoint
+            mainContent.style.marginLeft = mainContent.dataset.collapsedMargin;
+        }
     }
 
-    toggleBtn.addEventListener('click', () => {
+    // 桌面端折叠按钮事件
+    sidebarCollapseBtn.addEventListener('click', () => {
+        const mainContent = document.querySelector('.sidebar-adjusted');
         sidebar.classList.toggle('collapsed');
-        localStorage.setItem('sidebar-collapsed', sidebar.classList.contains('collapsed'));
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        localStorage.setItem('sidebar-collapsed', isCollapsed);
+        
+        if (window.innerWidth >= 1024) { // lg breakpoint
+            mainContent.style.marginLeft = isCollapsed ? mainContent.dataset.collapsedMargin : mainContent.dataset.expandedMargin;
+        }
     });
 
-    mobileTagsToggleBtn.addEventListener('click', () => {
+    // 移动端菜单按钮事件
+    mobileSidebarToggleBtn.addEventListener('click', () => {
         sidebar.classList.remove('collapsed');
+        sidebar.style.transform = 'translateX(0)';
+        sidebarOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
     });
 
+    // 移动端关闭按钮事件
+    desktopSidebarToggleBtn.addEventListener('click', () => {
+        sidebar.classList.add('collapsed');
+        sidebar.style.transform = 'translateX(-100%)';
+        sidebarOverlay.classList.add('hidden');
+        document.body.style.overflow = '';
+    });
+
+    // 遮罩层点击事件
     sidebarOverlay.addEventListener('click', () => {
         sidebar.classList.add('collapsed');
+        sidebar.style.transform = 'translateX(-100%)';
+        sidebarOverlay.classList.add('hidden');
+        document.body.style.overflow = '';
     });
 
     // --- Collapsible Task Sections Logic ---
@@ -131,34 +164,65 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set initial states based on localStorage or defaults
     if (localStorage.getItem('todo-collapsed') === 'true') {
         todoSection.classList.add('collapsed');
+        todoSection.querySelector('.task-section-header svg').style.transform = 'rotate(-90deg)';
     } else {
         todoSection.classList.remove('collapsed');
     }
 
-    if (localStorage.getItem('completed-collapsed') === 'false') {
-        completedSection.classList.remove('collapsed');
-    } else {
-        completedSection.classList.add('collapsed');
-    }
+    // 默认折叠已完成任务列表
+    completedSection.classList.add('collapsed');
+    completedSection.querySelector('.task-section-header svg').style.transform = 'rotate(-90deg)';
+    localStorage.setItem('completed-collapsed', 'true');
 
     todoSection.querySelector('.task-section-header').addEventListener('click', () => {
-        todoSection.classList.toggle('collapsed');
-        localStorage.setItem('todo-collapsed', todoSection.classList.contains('collapsed'));
+        const isCollapsed = todoSection.classList.toggle('collapsed');
+        localStorage.setItem('todo-collapsed', isCollapsed);
+        todoSection.querySelector('.task-section-header svg').style.transform = isCollapsed ? 'rotate(-90deg)' : '';
     });
 
     completedSection.querySelector('.task-section-header').addEventListener('click', () => {
-        completedSection.classList.toggle('collapsed');
-        localStorage.setItem('completed-collapsed', completedSection.classList.contains('collapsed'));
+        const isCollapsed = completedSection.classList.toggle('collapsed');
+        localStorage.setItem('completed-collapsed', isCollapsed);
+        completedSection.querySelector('.task-section-header svg').style.transform = isCollapsed ? 'rotate(-90deg)' : '';
     });
+    // --- End Collapsible Task Sections Logic ---
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        const mainContent = document.querySelector('.sidebar-adjusted');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        
+        if (window.innerWidth >= 1024) { // 桌面端
+            // 重置移动端样式
+            sidebar.style.transform = '';
+            mainContent.style.marginLeft = isCollapsed ? mainContent.dataset.collapsedMargin : mainContent.dataset.expandedMargin;
+            sidebarOverlay.classList.add('hidden');
+            document.body.style.overflow = '';
+        } else { // 移动端
+            mainContent.style.marginLeft = ''; // 重置默认CSS值
+            if (isCollapsed) {
+                sidebar.style.transform = 'translateX(-100%)';
+                sidebarOverlay.classList.add('hidden');
+                document.body.style.overflow = '';
+            } else {
+                sidebar.style.transform = 'translateX(0)';
+                sidebarOverlay.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    });
+
     // --- End Collapsible Task Sections Logic ---
 
     // --- Tag Autocomplete Logic ---
     const taskInput = document.getElementById('task-input');
+    const mobileTaskInput = document.getElementById('mobile-task-input');
     const autocompleteContainer = document.getElementById('tag-autocomplete-container');
+    const mobileAutocompleteContainer = document.getElementById('mobile-tag-autocomplete-container');
 
-    taskInput.addEventListener('input', () => {
-        const cursorPos = taskInput.selectionStart;
-        const textBeforeCursor = taskInput.value.substring(0, cursorPos);
+    function handleTagAutocomplete(input, container) {
+        const cursorPos = input.selectionStart;
+        const textBeforeCursor = input.value.substring(0, cursorPos);
         const tagMatch = textBeforeCursor.match(/#([^\s#]*)$/);
 
         if (tagMatch) {
@@ -166,46 +230,80 @@ document.addEventListener('DOMContentLoaded', () => {
             const allTags = [...new Set(allTasks.flatMap(task => task.tags ? task.tags.split(',') : []))].filter(Boolean);
             const matchingTags = allTags.filter(tag => tag.toLowerCase().startsWith(currentTagQuery.toLowerCase()));
             
-            showAutocomplete(matchingTags, currentTagQuery);
+            showAutocomplete(matchingTags, currentTagQuery, input, container);
         } else {
-            hideAutocomplete();
+            hideAutocomplete(container);
         }
+    }
+
+    // 桌面端输入监听
+    taskInput.addEventListener('input', () => {
+        handleTagAutocomplete(taskInput, autocompleteContainer);
     });
 
-    function showAutocomplete(tags, query) {
+    // 移动端输入监听
+    mobileTaskInput.addEventListener('input', () => {
+        handleTagAutocomplete(mobileTaskInput, mobileAutocompleteContainer);
+    });
+
+    function showAutocomplete(tags, query, input, container) {
         if (tags.length === 0) {
-            hideAutocomplete();
+            hideAutocomplete(container);
             return;
         }
-        autocompleteContainer.innerHTML = '';
+        container.innerHTML = '';
         tags.forEach(tag => {
             const div = document.createElement('div');
+            div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
             div.textContent = `#${tag}`;
             div.addEventListener('mousedown', (e) => {
                 e.preventDefault(); // Prevent input from losing focus
-                const textBeforeCursor = taskInput.value.substring(0, taskInput.selectionStart);
-                const textAfterCursor = taskInput.value.substring(taskInput.selectionStart);
+                const textBeforeCursor = input.value.substring(0, input.selectionStart);
+                const textAfterCursor = input.value.substring(input.selectionStart);
                 
                 const newTextBefore = textBeforeCursor.replace(/#([^\s#]*)$/, `#${tag} `);
                 
-                taskInput.value = newTextBefore + textAfterCursor;
-                hideAutocomplete();
-                taskInput.focus();
+                input.value = newTextBefore + textAfterCursor;
+                hideAutocomplete(container);
+                input.focus();
             });
-            autocompleteContainer.appendChild(div);
+            container.appendChild(div);
         });
-        autocompleteContainer.style.display = 'block';
+        container.style.display = 'block';
     }
 
-    function hideAutocomplete() {
-        autocompleteContainer.style.display = 'none';
+    function hideAutocomplete(container) {
+        container.style.display = 'none';
     }
 
+    // 处理输入框失焦
     taskInput.addEventListener('blur', () => {
-        // Delay hiding to allow click/mousedown event to register
-        setTimeout(hideAutocomplete, 150);
+        setTimeout(() => hideAutocomplete(autocompleteContainer), 150);
+    });
+
+    mobileTaskInput.addEventListener('blur', () => {
+        setTimeout(() => hideAutocomplete(mobileAutocompleteContainer), 150);
     });
     // --- End Tag Autocomplete Logic ---
+
+    // 添加折叠任务列表相关的CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        .task-content {
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            max-height: 2000px;
+            opacity: 1;
+            overflow: hidden;
+        }
+        .collapsed .task-content {
+            max-height: 0;
+            opacity: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+    `;
+    document.head.appendChild(style);
 });
 
 function showAuth() {
@@ -381,8 +479,27 @@ function renderTags() {
 
     // Add an "All" filter option
     const allLi = document.createElement('li');
-    allLi.textContent = 'All Tasks';
-    allLi.className = currentTagFilter === null ? 'active' : '';
+    const allContent = document.createElement('div');
+    allContent.className = 'flex items-center space-x-2';
+    
+    // Add icon
+    const allIcon = document.createElement('svg');
+    allIcon.className = 'tag-icon w-4 h-4 text-secondary';
+    allIcon.setAttribute('fill', 'none');
+    allIcon.setAttribute('stroke', 'currentColor');
+    allIcon.setAttribute('viewBox', '0 0 24 24');
+    allIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />';
+    
+    // Add text
+    const allText = document.createElement('span');
+    allText.className = 'tag-text';
+    allText.textContent = 'All Tasks';
+    
+    allContent.appendChild(allIcon);
+    allContent.appendChild(allText);
+    allLi.appendChild(allContent);
+    
+    allLi.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === null ? 'bg-primary/10 text-primary' : ''}`;
     allLi.addEventListener('click', () => {
         currentTagFilter = null;
         renderTags();
@@ -396,11 +513,34 @@ function renderTags() {
     tags.forEach(tag => {
         if (!tag) return;
         const li = document.createElement('li');
-        li.textContent = `#${tag}`;
-        li.className = currentTagFilter === tag ? 'active' : '';
-        if (li.className !== 'active') {
-            li.style.color = getTagColor(tag);
+        const content = document.createElement('div');
+        content.className = 'flex items-center space-x-2';
+        
+        // Add tag icon
+        const tagIcon = document.createElement('svg');
+        tagIcon.className = 'tag-icon w-4 h-4';
+        tagIcon.setAttribute('fill', 'none');
+        tagIcon.setAttribute('stroke', 'currentColor');
+        tagIcon.setAttribute('viewBox', '0 0 24 24');
+        tagIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />';
+        tagIcon.style.color = getTagColor(tag);
+        
+        // Add tag text
+        const tagText = document.createElement('span');
+        tagText.className = 'tag-text';
+        tagText.textContent = `#${tag}`;
+        
+        content.appendChild(tagIcon);
+        content.appendChild(tagText);
+        li.appendChild(content);
+        
+        li.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === tag ? 'bg-primary/10 text-primary' : ''}`;
+        
+        if (currentTagFilter !== tag) {
+            tagIcon.style.color = getTagColor(tag);
+            tagText.style.color = getTagColor(tag);
         }
+        
         li.addEventListener('click', () => {
             currentTagFilter = tag;
             renderTags();
@@ -415,6 +555,12 @@ function renderTasks() {
     const todoList = document.getElementById('todo-list');
     const completedList = document.getElementById('completed-list');
     const showMoreBtn = document.getElementById('show-more-btn');
+    const todoSection = document.getElementById('todo-section');
+    const completedSection = document.getElementById('completed-section');
+
+    // 确保即使没有任务时也保持最小高度
+    todoSection.style.minHeight = '20rem';
+    completedSection.style.minHeight = '20rem';
 
     todoList.innerHTML = '';
     completedList.innerHTML = '';
@@ -457,69 +603,133 @@ function renderTasks() {
     } else {
         showMoreBtn.style.display = 'none';
     }
+
+    // 如果没有任务，添加空状态提示
+    if (todoTasks.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'flex items-center justify-center h-[10rem] text-secondary';
+        emptyState.innerHTML = '还没有任务';
+        todoList.appendChild(emptyState);
+    }
+
+    if (completedTasks.length === 0) {
+        const emptyState = document.createElement('div');
+        emptyState.className = 'flex items-center justify-center h-[10rem] text-secondary';
+        emptyState.innerHTML = '还没有完成的任务';
+        completedList.appendChild(emptyState);
+    }
 }
 
-// NEW: Helper function to create a task element to avoid repetition
+// Helper function to create a task element
 function createTaskElement(task) {
     const taskEl = document.createElement('li');
     taskEl.dataset.id = task.ID;
-    taskEl.className = task.completed ? 'completed' : '';
+    taskEl.className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''}`;
 
+    // Checkbox container
+    const checkboxContainer = document.createElement('div');
+    checkboxContainer.className = 'flex items-start space-x-3';
+
+    // Custom checkbox
+    const checkboxWrapper = document.createElement('div');
+    checkboxWrapper.className = 'relative flex-shrink-0 mt-1';
+    
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = task.completed;
+    checkbox.className = 'peer absolute opacity-0 w-5 h-5 cursor-pointer';
     checkbox.addEventListener('change', () => toggleTaskCompletion(task.ID, !task.completed));
 
-    const taskDetails = document.createElement('div');
-    taskDetails.className = 'task-details';
+    const checkboxCustom = document.createElement('div');
+    checkboxCustom.className = `w-5 h-5 border-2 rounded-md border-border peer-checked:border-success peer-checked:bg-success
+                               flex items-center justify-center transition-colors peer-hover:border-success/50`;
+    
+    const checkIcon = document.createElement('svg');
+    checkIcon.className = 'w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity';
+    checkIcon.setAttribute('fill', 'none');
+    checkIcon.setAttribute('stroke', 'currentColor');
+    checkIcon.setAttribute('viewBox', '0 0 24 24');
+    checkIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />';
+    
+    checkboxCustom.appendChild(checkIcon);
+    checkboxWrapper.appendChild(checkbox);
+    checkboxWrapper.appendChild(checkboxCustom);
 
-    const content = document.createElement('span');
-    content.className = 'content';
-    content.textContent = task.content;
-    content.addEventListener('click', () => editTaskContent(content, task.ID));
+    // Task content
+    const taskContent = document.createElement('div');
+    taskContent.className = 'flex-1 min-w-0';
+
+    const content = document.createElement('div');
+    content.className = 'break-all';
+    const contentText = document.createElement('span');
+    contentText.className = `text-base ${task.completed ? 'line-through text-secondary' : ''}`;
+    contentText.textContent = task.content;
+    contentText.addEventListener('click', () => editTaskContent(contentText, task.ID));
+    content.appendChild(contentText);
+
+    const metadata = document.createElement('div');
+    metadata.className = 'flex items-center space-x-2 mt-2';
 
     const timestamp = document.createElement('span');
-    timestamp.className = 'timestamp';
+    timestamp.className = 'text-xs text-secondary';
     const date = new Date(task.completed ? task.UpdatedAt : task.CreatedAt);
     const label = task.completed ? 'Completed' : 'Created';
-    timestamp.textContent = `${label} ${date.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`;
+    timestamp.textContent = `${label} ${date.toLocaleString('zh-CN', { 
+        timeZone: 'Asia/Shanghai', 
+        hour12: false, 
+        year: 'numeric', 
+        month: '2-digit', 
+        day: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    })}`;
 
-    taskDetails.appendChild(content);
-    taskDetails.appendChild(timestamp);
+    metadata.appendChild(timestamp);
 
-    const tags = document.createElement('span');
-    tags.className = 'tags';
+    // Tags
     if (task.tags) {
+        const tagsContainer = document.createElement('div');
+        tagsContainer.className = 'flex flex-wrap gap-1 mt-2';
+        
         task.tags.split(',').forEach(tag => {
             if (!tag) return;
             const tagEl = document.createElement('span');
-                tagEl.className = 'tag';
-                tagEl.textContent = `#${tag}`;
-                tagEl.style.backgroundColor = getTagColor(tag);
-                tags.appendChild(tagEl);
+            const tagColor = getTagColor(tag);
+            tagEl.className = 'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium';
+            tagEl.style.backgroundColor = `${tagColor}20`; // 20 is hex for 12% opacity
+            tagEl.style.color = tagColor;
+            tagEl.textContent = `#${tag}`;
+            tagsContainer.appendChild(tagEl);
         });
+        
+        taskContent.appendChild(content);
+        taskContent.appendChild(tagsContainer);
+        taskContent.appendChild(metadata);
+    } else {
+        taskContent.appendChild(content);
+        taskContent.appendChild(metadata);
     }
 
+    // Delete button
     const deleteBtn = document.createElement('button');
-    deleteBtn.innerHTML = '&times;';
-    deleteBtn.className = 'delete-btn';
+    deleteBtn.className = 'ml-2 text-secondary opacity-0 group-hover:opacity-100 hover:text-red-500 focus:opacity-100 transition-opacity';
+    deleteBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>`;
     deleteBtn.addEventListener('click', () => deleteTask(task.ID));
 
-    const actions = document.createElement('div');
-    actions.className = 'task-actions';
-    actions.appendChild(tags);
-    actions.appendChild(deleteBtn);
-
-    taskEl.appendChild(checkbox);
-    taskEl.appendChild(taskDetails);
-    taskEl.appendChild(actions);
+    checkboxContainer.appendChild(checkboxWrapper);
+    checkboxContainer.appendChild(taskContent);
+    taskEl.appendChild(checkboxContainer);
+    taskEl.appendChild(deleteBtn);
 
     return taskEl;
 }
 
 async function handleCreateTask(e) {
     e.preventDefault();
-    const input = document.getElementById('task-input');
+    const isDesktop = e.target.id === 'task-form';
+    const input = document.getElementById(isDesktop ? 'task-input' : 'mobile-task-input');
     const inputValue = input.value.trim();
     if (!inputValue) return;
 
@@ -626,6 +836,226 @@ function editTaskContent(span, id) {
         }
     });
 }
+
+// PWA 导航和侧边栏管理
+function setupMobileNavigation() {
+    // 获取DOM元素
+    const mobileSidebarToggle = document.getElementById('mobile-sidebar-toggle');
+    const desktopSidebarToggle = document.getElementById('desktop-sidebar-toggle');
+    const mobileSearchToggle = document.getElementById('mobile-search-toggle');
+    const mobileSearch = document.getElementById('mobile-search');
+    const mobileSearchInput = document.getElementById('mobile-search-input');
+    const desktopSearchInput = document.getElementById('search-input');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
+    const sidebarCollapseBtn = document.getElementById('sidebar-collapse-btn');
+    const mainContent = document.querySelector('.sidebar-adjusted');
+    
+    let touchStartX = 0;
+    let touchMoveX = 0;
+    let sidebarWidth = 256; // 16rem = 256px
+
+    // 移动端搜索栏切换
+    if (mobileSearchToggle) {
+        mobileSearchToggle.addEventListener('click', () => {
+            mobileSearch.classList.toggle('active');
+            if (mobileSearch.classList.contains('active')) {
+                document.getElementById('mobile-search-input').focus();
+            }
+        });
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+        document.body.style.removeProperty('overflow');
+    }
+
+    function openSidebar() {
+        sidebar.classList.add('active');
+        sidebarOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    // 移动端手势控制
+    function handleTouchStart(e) {
+        touchStartX = e.touches[0].clientX;
+        sidebar.style.transition = 'none';
+    }
+
+    function handleTouchMove(e) {
+        touchMoveX = e.touches[0].clientX;
+        const deltaX = touchMoveX - touchStartX;
+        
+        if (!sidebar.classList.contains('active') && deltaX > 0) {
+            // 从左向右滑动打开侧边栏
+            const translateX = Math.min(deltaX - sidebarWidth, 0);
+            sidebar.style.transform = `translateX(${translateX}px)`;
+            const opacity = (deltaX / sidebarWidth) * 0.5;
+            sidebarOverlay.style.display = 'block';
+            sidebarOverlay.style.opacity = opacity;
+        } else if (sidebar.classList.contains('active') && deltaX < 0) {
+            // 从右向左滑动关闭侧边栏
+            const translateX = Math.max(deltaX, -sidebarWidth);
+            sidebar.style.transform = `translateX(${translateX}px)`;
+            const opacity = 0.5 - (Math.abs(deltaX) / sidebarWidth) * 0.5;
+            sidebarOverlay.style.opacity = opacity;
+        }
+    }
+
+    function handleTouchEnd(e) {
+        const deltaX = touchMoveX - touchStartX;
+        sidebar.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        sidebarOverlay.style.transition = 'opacity 0.3s ease-in-out';
+
+        if (!sidebar.classList.contains('active') && deltaX > sidebarWidth * 0.4) {
+            openSidebar();
+        } else if (sidebar.classList.contains('active') && deltaX < -sidebarWidth * 0.4) {
+            closeSidebar();
+        } else {
+            sidebar.style.transform = sidebar.classList.contains('active') ? 
+                'translateX(0)' : 'translateX(-100%)';
+            sidebarOverlay.style.opacity = sidebar.classList.contains('active') ? '1' : '0';
+            if (!sidebar.classList.contains('active')) {
+                sidebarOverlay.style.display = 'none';
+            }
+        }
+    }
+
+    // 添加事件监听器
+    if (mobileSidebarToggle) {
+        mobileSidebarToggle.addEventListener('click', openSidebar);
+    }
+
+    if (desktopSidebarToggle) {
+        desktopSidebarToggle.addEventListener('click', closeSidebar);
+    }
+
+    if (sidebarOverlay) {
+        sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+
+    // 移动端手势
+    sidebar.addEventListener('touchstart', handleTouchStart, { passive: true });
+    sidebar.addEventListener('touchmove', handleTouchMove, { passive: true });
+    sidebar.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    // ESC 键关闭
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (sidebar.classList.contains('active')) {
+                closeSidebar();
+            }
+            if (mobileSearch.classList.contains('active')) {
+                mobileSearch.classList.remove('active');
+            }
+        }
+    });
+
+    // 处理侧边栏折叠
+    function toggleSidebarCollapse(isCollapsed) {
+        if (isCollapsed) {
+            sidebar.classList.add('collapsed');
+            mainContent.classList.replace('lg:ml-[256px]', 'lg:ml-[60px]');
+            localStorage.setItem('sidebarCollapsed', 'true');
+        } else {
+            sidebar.classList.remove('collapsed');
+            mainContent.classList.replace('lg:ml-[60px]', 'lg:ml-[256px]');
+            localStorage.setItem('sidebarCollapsed', 'false');
+        }
+    }
+
+    // 初始化侧边栏状态
+    if (sidebarCollapseBtn) {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        toggleSidebarCollapse(isCollapsed);
+
+        // 添加点击事件
+        sidebarCollapseBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSidebarCollapse(!sidebar.classList.contains('collapsed'));
+        });
+
+        // 添加双击侧边栏切换功能
+        sidebar.addEventListener('dblclick', (e) => {
+            if (window.innerWidth >= 1024 && e.target.closest('#sidebar')) {
+                toggleSidebarCollapse(!sidebar.classList.contains('collapsed'));
+            }
+        });
+    }
+
+    // 搜索功能同步
+    function syncSearchInputs(sourceInput, targetInput) {
+        targetInput.value = sourceInput.value;
+        // 触发搜索事件（如果有的话）
+        const event = new Event('input', { bubbles: true });
+        targetInput.dispatchEvent(event);
+    }
+
+    if (mobileSearchInput && desktopSearchInput) {
+        mobileSearchInput.addEventListener('input', () => syncSearchInputs(mobileSearchInput, desktopSearchInput));
+        desktopSearchInput.addEventListener('input', () => syncSearchInputs(desktopSearchInput, mobileSearchInput));
+    }
+
+    // 移动端搜索栏切换
+    if (mobileSearchToggle) {
+        mobileSearchToggle.addEventListener('click', () => {
+            mobileSearch.classList.toggle('active');
+            if (mobileSearch.classList.contains('active')) {
+                mobileSearchInput.focus();
+            }
+        });
+    }
+
+    // 监听窗口大小变化
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const isDesktop = window.innerWidth >= 1024;
+            
+            if (isDesktop) {
+                // 桌面模式
+                sidebar.style.removeProperty('transform');
+                sidebarOverlay.classList.remove('active');
+                document.body.style.removeProperty('overflow');
+                
+                // 恢复折叠状态
+                const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (isCollapsed) {
+                    sidebar.classList.add('collapsed');
+                    mainContent.classList.replace('lg:ml-[256px]', 'lg:ml-[60px]');
+                }
+            } else {
+                // 移动模式
+                if (!sidebar.classList.contains('active')) {
+                    sidebar.style.transform = 'translateX(-100%)';
+                }
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.replace('lg:ml-[60px]', 'lg:ml-[256px]');
+                
+                // 同步搜索内容
+                if (mobileSearchInput && desktopSearchInput) {
+                    mobileSearchInput.value = desktopSearchInput.value;
+                }
+            }
+        }, 100);
+    });
+
+    // 处理 PWA 显示模式
+    window.addEventListener('load', () => {
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            document.body.classList.add('standalone');
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // ...existing code...
+    setupMobileNavigation(); // 设置移动端导航
+    // ...existing code...
+});
 
 // PWA Service Worker
 if ('serviceWorker' in navigator) {
