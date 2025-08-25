@@ -1,9 +1,9 @@
 // --- Tag Color Generation ---
 const tagColorCache = {};
 const colorPalette = [
-    '#1abc9c', '#2ecc71', '#3498db', '#9b59b6', '#34495e',
-    '#f1c40f', '#e67e22', '#e74c3c', '#7f8c8d', '#16a085',
-    '#27ae60', '#2980b9', '#8e44ad', '#c0392b'
+    '#0f9b82', '#1ea55e', '#2980b9', '#8e44ad', '#2c3e50',
+    '#d4ac0d', '#d35400', '#c0392b', '#596468', '#117a65',
+    '#1e8449', '#1a5276', '#6c3483', '#922b21'
 ];
 
 function getTagColor(tag) {
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px'; // 设置新高度，最大200px
     }
 
-    // 为两个输入框添加自动调整高度的功能
+    // 为两个输入框添加自动调整高度的功能和键盘事件处理
     [taskInput, mobileTaskInput].forEach(textarea => {
         // 初始化高度
         autoResizeTextarea(textarea);
@@ -234,6 +234,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // 监听输入事件
         textarea.addEventListener('input', () => {
             autoResizeTextarea(textarea);
+        });
+        
+        // 添加键盘事件处理
+        textarea.addEventListener('keydown', (e) => {
+            // Enter键提交表单
+            if (e.key === 'Enter' && !e.altKey && !e.shiftKey && !e.ctrlKey) {
+                e.preventDefault();
+                const form = textarea.closest('form');
+                form.dispatchEvent(new Event('submit'));
+            }
+            // Alt+Enter插入换行
+            else if (e.key === 'Enter' && e.altKey) {
+                e.preventDefault();
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const value = textarea.value;
+                textarea.value = value.substring(0, start) + '\n' + value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + 1;
+                autoResizeTextarea(textarea);
+            }
         });
     });
 
@@ -516,7 +536,7 @@ function renderTags() {
     allContent.appendChild(allText);
     allLi.appendChild(allContent);
     
-    allLi.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === null ? 'bg-primary/10 text-primary' : ''}`;
+    allLi.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === null ? 'bg-blue-500 text-white' : ''}`;
     allLi.addEventListener('click', () => {
         currentTagFilter = null;
         renderTags();
@@ -551,11 +571,13 @@ function renderTags() {
         content.appendChild(tagText);
         li.appendChild(content);
         
-        li.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === tag ? 'bg-primary/10 text-primary' : ''}`;
+        li.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === tag ? 'bg-blue-500 text-white' : ''}`;
         
         if (currentTagFilter !== tag) {
-            tagIcon.style.color = getTagColor(tag);
-            tagText.style.color = getTagColor(tag);
+            const tagColor = getTagColor(tag);
+            tagIcon.style.color = tagColor;
+            tagText.style.color = tagColor;
+            li.style.backgroundColor = `${tagColor}15`;
         }
         
         li.addEventListener('click', () => {
@@ -853,16 +875,16 @@ function createTaskElement(task) {
     hitArea.className = 'absolute -inset-1 z-0';
     
     const checkboxCustom = document.createElement('div');
-    checkboxCustom.className = `w-6 h-6 border-2 rounded-md border-border peer-checked:border-success peer-checked:bg-success
-                               flex items-center justify-center transition-colors group-hover:border-success/50
-                               relative`;
+    checkboxCustom.className = `w-6 h-6 border-2 rounded-md border-gray-400 peer-checked:border-success peer-checked:bg-success
+                               flex items-center justify-center transition-colors group-hover:border-success/70
+                               relative shadow-sm`;
     
     const checkIcon = document.createElement('svg');
     checkIcon.className = 'w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity';
     checkIcon.setAttribute('fill', 'none');
     checkIcon.setAttribute('stroke', 'currentColor');
     checkIcon.setAttribute('viewBox', '0 0 24 24');
-    checkIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />';
+    checkIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />';
     
     // 添加统一的点击事件处理
     const handleClick = () => toggleTaskCompletion(task.ID, !task.completed);
@@ -885,9 +907,9 @@ function createTaskElement(task) {
     const content = document.createElement('div');
     content.className = 'break-all';
     const contentText = document.createElement('span');
-    contentText.className = `text-base ${task.completed ? 'line-through text-secondary' : ''}`;
+    contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
     contentText.textContent = task.content;
-    contentText.addEventListener('click', () => editTaskContent(contentText, task.ID));
+    contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
     content.appendChild(contentText);
 
     const metadata = document.createElement('div');
@@ -920,12 +942,12 @@ function createTaskElement(task) {
             const tagEl = document.createElement('span');
             const tagColor = getTagColor(tag);
             tagEl.className = 'task-tag inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium cursor-pointer transition-colors';
-            tagEl.style.backgroundColor = `${tagColor}20`;
+            tagEl.style.backgroundColor = `${tagColor}30`;
             tagEl.style.color = tagColor;
             
             // 添加hover效果
             tagEl.addEventListener('mouseenter', () => {
-                tagEl.style.backgroundColor = `${tagColor}30`;
+                tagEl.style.backgroundColor = `${tagColor}40`;
             });
             tagEl.addEventListener('mouseleave', () => {
                 tagEl.style.backgroundColor = `${tagColor}20`;

@@ -6,6 +6,17 @@
 - 参考[memos](https://github.com/usememos/memos)，它使用了 codemirror 编辑器，请对项目输入框和任务列表进行升级，支持 Markdown 输入和渲染。
 - 使用[OverType](https://github.com/panphora/overtype)对任务输入框增强和编辑，支持 Markdown。
 
+## v0.1.8
+
+- 修改任务列表项为双击编辑而非单击编辑
+- 修改已完成任务样式为灰色文字而非删除线
+- 实现Enter提交任务，Alt+Enter换行功能
+- 修改侧边栏标签点击后背景为蓝色
+- 加深任务列表和侧边栏标签颜色并保持一致
+- 优化输入框样式使其更清晰
+- 增强任务复选框的可见性
+- 修改已完成任务的复选框为带对号样式
+
 ## v0.1.7
 
 - 页面优化调整
