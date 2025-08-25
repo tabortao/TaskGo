@@ -813,6 +813,13 @@ function renderTasks() {
     const todoTasks = filteredTasks.filter(t => !t.completed);
     const completedTasks = filteredTasks.filter(t => t.completed);
 
+    // Sort todo tasks: pinned tasks first, then by creation time (newest first)
+    todoTasks.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return new Date(b.CreatedAt) - new Date(a.CreatedAt);
+    });
+
     // Render Todo tasks
     todoTasks.forEach(task => {
         const taskEl = createTaskElement(task);
@@ -852,7 +859,11 @@ function renderTasks() {
 function createTaskElement(task) {
     const taskEl = document.createElement('li');
     taskEl.dataset.id = task.ID;
-    taskEl.className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-2 border border-border/50 rounded-lg`;
+    let className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-2 border border-border/50 rounded-lg`;
+    if (task.pinned) {
+        className += ' pinned';
+    }
+    taskEl.className = className;
 
     // Checkbox container
     const checkboxContainer = document.createElement('div');
@@ -912,11 +923,17 @@ function createTaskElement(task) {
     contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
     content.appendChild(contentText);
 
-    const metadata = document.createElement('div');
-    metadata.className = 'flex items-center space-x-2 mt-2';
+    // 创建标签和日期的容器
+    const tagsDateContainer = document.createElement('div');
+    tagsDateContainer.className = 'flex items-center justify-between mt-2';
 
+    // 标签容器
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'flex flex-wrap gap-1';
+
+    // 日期显示
     const timestamp = document.createElement('span');
-    timestamp.className = 'text-xs text-secondary';
+    timestamp.className = 'text-xs text-secondary flex-shrink-0 ml-2';
     const date = new Date(task.completed ? task.UpdatedAt : task.CreatedAt);
     const label = task.completed ? 'Completed' : 'Created';
     timestamp.textContent = `${label} ${date.toLocaleString('zh-CN', { 
@@ -929,13 +946,11 @@ function createTaskElement(task) {
         minute: '2-digit' 
     })}`;
 
-    metadata.appendChild(timestamp);
+    tagsDateContainer.appendChild(tagsContainer);
+    tagsDateContainer.appendChild(timestamp);
 
-    // Tags
+    // 添加标签到标签容器
     if (task.tags) {
-        const tagsContainer = document.createElement('div');
-        tagsContainer.className = 'flex flex-wrap gap-1 mt-2';
-        
         task.tags.split(',').forEach(tag => {
             if (!tag) return;
             if (!tag.trim()) return; // 跳过空标签
@@ -958,27 +973,44 @@ function createTaskElement(task) {
             tagEl.textContent = tag.trim();
             tagsContainer.appendChild(tagEl);
         });
-        
-        taskContent.appendChild(content);
-        taskContent.appendChild(tagsContainer);
-        taskContent.appendChild(metadata);
-    } else {
-        taskContent.appendChild(content);
-        taskContent.appendChild(metadata);
     }
 
-    // Delete button
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'absolute right-4 top-4 text-secondary opacity-0 group-hover:opacity-100 hover:text-red-500 focus:opacity-100 transition-opacity';
-    deleteBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    taskContent.appendChild(content);
+    taskContent.appendChild(tagsDateContainer);
+
+    // 操作按钮容器
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'absolute right-4 top-4 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity';
+
+    // 聊天图标按钮
+    const commentBtn = document.createElement('button');
+    commentBtn.className = 'text-secondary hover:text-primary focus:opacity-100 transition-colors';
+    commentBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     </svg>`;
-    deleteBtn.addEventListener('click', () => deleteTask(task.ID));
+    commentBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showCommentModal(task.ID);
+    });
+
+    // 三个竖向点的菜单按钮
+    const menuBtn = document.createElement('button');
+    menuBtn.className = 'text-secondary hover:text-primary focus:opacity-100 transition-colors';
+    menuBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zM12 13a1 1 0 110-2 1 1 0 010 2zM12 20a1 1 0 110-2 1 1 0 010 2z" />
+    </svg>`;
+    menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showTaskMenu(e, task.ID, task.pinned);
+    });
+
+    actionsContainer.appendChild(commentBtn);
+    actionsContainer.appendChild(menuBtn);
 
     checkboxContainer.appendChild(checkboxWrapper);
     checkboxContainer.appendChild(taskContent);
     taskEl.appendChild(checkboxContainer);
-    taskEl.appendChild(deleteBtn);
+    taskEl.appendChild(actionsContainer);
 
     return taskEl;
 }
@@ -1336,6 +1368,229 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // PWA Service Worker
+// 任务菜单相关函数
+function showTaskMenu(event, taskId, isPinned) {
+    // 创建菜单元素
+    const existingMenu = document.getElementById('task-menu');
+    if (existingMenu) {
+        existingMenu.remove();
+    }
+
+    const menu = document.createElement('div');
+    menu.id = 'task-menu';
+    menu.className = 'fixed z-50 bg-surface rounded-lg shadow-lg border border-border w-48 py-1';
+    
+    const pinText = isPinned ? 'Unpin Task' : 'Pin Task';
+    const pinIcon = isPinned ? 'M16 12V4a4 4 0 00-8 0v8' : 'M16 12V4a4 4 0 00-8 0v8L6 14v2h12v-2l-2-2z';
+    
+    menu.innerHTML = `
+        <button id="pin-task-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${pinIcon}" />
+            </svg>
+            <span>${pinText}</span>
+        </button>
+        <button id="delete-task-btn" class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-background flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            <span>Delete Task</span>
+        </button>
+    `;
+
+    // 定位菜单
+    const rect = event.target.getBoundingClientRect();
+    menu.style.left = `${rect.left - 150}px`;
+    menu.style.top = `${rect.bottom + 5}px`;
+
+    document.body.appendChild(menu);
+
+    // 添加事件监听器
+    document.getElementById('pin-task-btn').addEventListener('click', () => {
+        pinTask(taskId, !isPinned);
+        menu.remove();
+    });
+
+    document.getElementById('delete-task-btn').addEventListener('click', () => {
+        deleteTask(taskId);
+        menu.remove();
+    });
+
+    // 点击外部关闭菜单
+    const closeMenu = (e) => {
+        if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', closeMenu);
+        }
+    };
+    setTimeout(() => document.addEventListener('click', closeMenu), 0);
+}
+
+// 评论模态框相关函数
+function showCommentModal(taskId) {
+    // 创建模态框
+    const existingModal = document.getElementById('comment-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'comment-modal';
+    modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50';
+    
+    modal.innerHTML = `
+        <div class="bg-surface rounded-lg shadow-xl max-w-md w-full max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between p-4 border-b border-border">
+                <h2 class="text-xl font-medium">Task Comments</h2>
+                <button id="close-comment-modal" class="text-secondary hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4">
+                <div id="comments-list" class="space-y-3 mb-4">
+                    <!-- Comments will be loaded here -->
+                </div>
+            </div>
+            <div class="p-4 border-t border-border">
+                <form id="comment-form" class="flex space-x-2">
+                    <input type="text" id="comment-input" placeholder="Add a comment..." 
+                           class="flex-1 px-3 py-2 border border-border rounded-lg focus:outline-none focus:border-primary">
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // 加载评论
+    loadComments(taskId);
+
+    // 添加事件监听器
+    document.getElementById('close-comment-modal').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    document.getElementById('comment-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const input = document.getElementById('comment-input');
+        if (input.value.trim()) {
+            addComment(taskId, input.value.trim());
+            input.value = '';
+        }
+    });
+
+    // 点击外部关闭模态框
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+}
+
+// 置顶任务函数
+async function pinTask(taskId, pinned) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ pinned })
+        });
+
+        if (response.ok) {
+            loadTasks(); // 重新加载任务列表
+        } else {
+            console.error('Failed to pin/unpin task');
+        }
+    } catch (error) {
+        console.error('Error pinning task:', error);
+    }
+}
+
+// 加载评论函数
+async function loadComments(taskId) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/comments`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            const comments = result.data || [];
+            renderComments(comments);
+        } else {
+            console.error('Failed to load comments');
+        }
+    } catch (error) {
+        console.error('Error loading comments:', error);
+    }
+}
+
+// 渲染评论函数
+function renderComments(comments) {
+    const commentsList = document.getElementById('comments-list');
+    commentsList.innerHTML = '';
+
+    if (comments.length === 0) {
+        commentsList.innerHTML = '<p class="text-secondary text-center">No comments yet</p>';
+        return;
+    }
+
+    comments.forEach(comment => {
+        const commentEl = document.createElement('div');
+        commentEl.className = 'bg-background p-3 rounded-lg';
+        
+        const date = new Date(comment.CreatedAt);
+        commentEl.innerHTML = `
+            <div class="flex items-center justify-between mb-2">
+                <span class="font-medium text-sm">${comment.User?.username || 'Unknown'}</span>
+                <span class="text-xs text-secondary">${date.toLocaleString('zh-CN', {
+                    timeZone: 'Asia/Shanghai',
+                    hour12: false,
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</span>
+            </div>
+            <p class="text-sm">${comment.content}</p>
+        `;
+        
+        commentsList.appendChild(commentEl);
+    });
+}
+
+// 添加评论函数
+async function addComment(taskId, content) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ content })
+        });
+
+        if (response.ok) {
+            loadComments(taskId); // 重新加载评论
+        } else {
+            console.error('Failed to add comment');
+        }
+    } catch (error) {
+        console.error('Error adding comment:', error);
+    }
+}
+
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')

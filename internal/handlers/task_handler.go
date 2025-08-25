@@ -127,7 +127,7 @@ func UpdateTask(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		// 只允许更新部分字段
-		allowed := map[string]bool{"content": true, "tags": true, "completed": true}
+		allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true}
 		updateFields := make(map[string]interface{})
 		for k, v := range input {
 			if allowed[k] {
@@ -161,5 +161,61 @@ func DeleteTask(db *gorm.DB) gin.HandlerFunc {
 
 		db.Delete(&task)
 		c.JSON(http.StatusOK, gin.H{"message": "Task deleted"})
+	}
+}
+
+// GetTaskComments 获取任务的所有评论
+func GetTaskComments(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, _ := c.Get("userID")
+		taskID, _ := strconv.Atoi(c.Param("id"))
+
+		// 验证任务是否属于当前用户
+		var task models.Task
+		if err := db.Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+
+		var comments []models.Comment
+		db.Where("task_id = ?", taskID).Order("created_at asc").Find(&comments)
+
+		c.JSON(http.StatusOK, gin.H{"data": comments})
+	}
+}
+
+// CreateTaskComment 为任务添加评论
+func CreateTaskComment(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, _ := c.Get("userID")
+		taskID, _ := strconv.Atoi(c.Param("id"))
+
+		// 验证任务是否属于当前用户
+		var task models.Task
+		if err := db.Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+
+		var input struct {
+			Content string `json:"content" binding:"required"`
+		}
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		comment := models.Comment{
+			TaskID:  uint(taskID),
+			UserID:  userID.(uint),
+			Content: input.Content,
+		}
+
+		if err := db.Create(&comment).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create comment"})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"data": comment})
 	}
 }

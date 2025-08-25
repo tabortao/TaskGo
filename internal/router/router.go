@@ -36,6 +36,10 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			authed.PUT("/tasks/:id", handlers.UpdateTask(db))
 			authed.DELETE("/tasks/:id", handlers.DeleteTask(db))
 			authed.POST("/tasks/update-tags", handlers.UpdateTagForAllTasks(db))
+			
+			// 评论相关路由
+			authed.GET("/tasks/:id/comments", handlers.GetTaskComments(db))
+			authed.POST("/tasks/:id/comments", handlers.CreateTaskComment(db))
 		}
 	}
 
