@@ -127,7 +127,7 @@ func UpdateTask(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		// 只允许更新部分字段
-		allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true}
+        allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true, "favorite": true}
 		updateFields := make(map[string]interface{})
 		for k, v := range input {
 			if allowed[k] {

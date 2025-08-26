@@ -17,6 +17,7 @@ type Task struct {
 	UserID    uint   `json:"user_id"`
 	Remark    string `json:"remark"`
 	Pinned    bool   `gorm:"default:false" json:"pinned"`
+	Favorite  bool   `gorm:"default:false" json:"favorite"`
 }
 
 type Comment struct {

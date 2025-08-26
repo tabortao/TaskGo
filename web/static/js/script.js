@@ -27,6 +27,7 @@ let allTasks = [];
 let currentTagFilter = null;
 let currentSearchQuery = '';
 let completedTasksToShow = 10;
+let currentView = 'all'; // 'all' or 'favorites'
 
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
@@ -86,6 +87,46 @@ document.addEventListener('DOMContentLoaded', () => {
     // Task form submission for both desktop and mobile
     document.getElementById('task-form').addEventListener('submit', handleCreateTask);
     document.getElementById('mobile-task-form').addEventListener('submit', handleCreateTask);
+
+    // Add tag button and modal handling
+    const addTagBtn = document.getElementById('add-tag-btn');
+    const createTagModal = document.getElementById('create-tag-modal');
+    const createTagForm = document.getElementById('create-tag-form');
+    const newTagInput = document.getElementById('new-tag-input');
+    const closeModalBtns = createTagModal.querySelectorAll('.close-modal-btn');
+
+    addTagBtn.addEventListener('click', () => {
+        createTagModal.classList.remove('hidden');
+        newTagInput.focus();
+    });
+
+    closeModalBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            createTagModal.classList.add('hidden');
+            newTagInput.value = '';
+        });
+    });
+
+    // Close modal when clicking outside
+    createTagModal.addEventListener('click', (e) => {
+        if (e.target === createTagModal) {
+            createTagModal.classList.add('hidden');
+            newTagInput.value = '';
+        }
+    });
+
+    // Handle create tag form submission
+    createTagForm.addEventListener('submit', handleCreateTag);
+
+    // Favorites navigation
+    const favoritesNav = document.getElementById('favorites-nav');
+    favoritesNav.addEventListener('click', () => {
+        currentView = currentView === 'favorites' ? 'all' : 'favorites';
+        currentTagFilter = null; // Reset tag filter when switching views
+        updateFavoritesNavState();
+        renderTags();
+        renderTasks();
+    });
 
     // Search input listener
     document.getElementById('search-input').addEventListener('input', (e) => {
@@ -795,7 +836,12 @@ function renderTasks() {
 
     let filteredTasks = allTasks;
 
-    // Apply search filter first
+    // Apply favorites filter first if in favorites view
+    if (currentView === 'favorites') {
+        filteredTasks = filteredTasks.filter(task => task.favorite);
+    }
+
+    // Apply search filter
     if (currentSearchQuery) {
         const lowerCaseQuery = currentSearchQuery.toLowerCase();
         filteredTasks = filteredTasks.filter(task =>
@@ -803,7 +849,7 @@ function renderTasks() {
         );
     }
 
-    // Apply tag filter next
+    // Apply tag filter
     if (currentTagFilter) {
         filteredTasks = filteredTasks.filter(task =>
             task.tags && task.tags.split(',').includes(currentTagFilter)
@@ -843,15 +889,44 @@ function renderTasks() {
     if (todoTasks.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'flex items-center justify-center h-[10rem] text-secondary';
-        emptyState.innerHTML = '还没有任务';
+        if (currentView === 'favorites') {
+            emptyState.innerHTML = '还没有收藏的未完成任务';
+        } else {
+            emptyState.innerHTML = '还没有任务';
+        }
         todoList.appendChild(emptyState);
     }
 
     if (completedTasks.length === 0) {
         const emptyState = document.createElement('div');
         emptyState.className = 'flex items-center justify-center h-[10rem] text-secondary';
-        emptyState.innerHTML = '还没有完成的任务';
+        if (currentView === 'favorites') {
+            emptyState.innerHTML = '还没有收藏的已完成任务';
+        } else {
+            emptyState.innerHTML = '还没有完成的任务';
+        }
         completedList.appendChild(emptyState);
+    }
+}
+
+function updateFavoritesNavState() {
+    const favoritesBtn = document.getElementById('favorites-btn');
+    const allTasksBtn = document.getElementById('all-tasks-btn');
+    
+    if (currentView === 'favorites') {
+        favoritesBtn.classList.add('bg-primary', 'text-white');
+        favoritesBtn.classList.remove('text-secondary', 'hover:bg-gray-100');
+        if (allTasksBtn) {
+            allTasksBtn.classList.remove('bg-primary', 'text-white');
+            allTasksBtn.classList.add('text-secondary', 'hover:bg-gray-100');
+        }
+    } else {
+        favoritesBtn.classList.remove('bg-primary', 'text-white');
+        favoritesBtn.classList.add('text-secondary', 'hover:bg-gray-100');
+        if (allTasksBtn) {
+            allTasksBtn.classList.add('bg-primary', 'text-white');
+            allTasksBtn.classList.remove('text-secondary', 'hover:bg-gray-100');
+        }
     }
 }
 
@@ -982,6 +1057,21 @@ function createTaskElement(task) {
     const actionsContainer = document.createElement('div');
     actionsContainer.className = 'absolute right-4 top-4 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity';
 
+    // 收藏图标按钮
+    const favoriteBtn = document.createElement('button');
+    favoriteBtn.className = `transition-colors focus:opacity-100 ${task.favorite ? 'text-yellow-500 hover:text-yellow-600' : 'text-secondary hover:text-yellow-500'}`;
+    favoriteBtn.innerHTML = task.favorite ? 
+        `<svg class="w-5 h-5" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>` :
+        `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>`;
+    favoriteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleTaskFavorite(task.ID, !task.favorite);
+    });
+
     // 聊天图标按钮
     const commentBtn = document.createElement('button');
     commentBtn.className = 'text-secondary hover:text-primary focus:opacity-100 transition-colors';
@@ -1004,6 +1094,7 @@ function createTaskElement(task) {
         showTaskMenu(e, task.ID, task.pinned);
     });
 
+    actionsContainer.appendChild(favoriteBtn);
     actionsContainer.appendChild(commentBtn);
     actionsContainer.appendChild(menuBtn);
 
@@ -1038,9 +1129,70 @@ async function handleCreateTask(e) {
 
     if (res.ok) {
         input.value = '';
+        // 重置输入框高度到默认值
+        input.style.height = 'auto';
+        input.style.height = '48px'; // 恢复到最小高度
         loadTasks();
     } else {
         alert('Failed to create task');
+    }
+}
+
+async function handleCreateTag(e) {
+    e.preventDefault();
+    const tagName = document.getElementById('new-tag-input').value.trim();
+    
+    if (!tagName) {
+        alert('Please enter a tag name');
+        return;
+    }
+
+    // Check if tag already exists
+    const existingTags = [...new Set(allTasks.flatMap(task => task.tags ? task.tags.split(',') : []))].filter(Boolean);
+    if (existingTags.includes(tagName)) {
+        alert('Tag already exists');
+        return;
+    }
+
+    try {
+        // Create a temporary task with the new tag to register it in the system
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                content: `Temporary task for tag: ${tagName}`, 
+                tags: tagName 
+            })
+        });
+
+        if (res.ok) {
+            const response = await res.json();
+            const taskId = response.data.ID;
+            
+            // Immediately delete the temporary task
+            await fetch(`/api/tasks/${taskId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            // Close modal and refresh
+            document.getElementById('create-tag-modal').classList.add('hidden');
+            document.getElementById('new-tag-input').value = '';
+            
+            // Reload tasks to refresh the tag list
+            await loadTasks();
+            
+            alert(`Tag "${tagName}" created successfully!`);
+        } else {
+            alert('Failed to create tag');
+        }
+    } catch (error) {
+        console.error('Error creating tag:', error);
+        alert('Failed to create tag');
     }
 }
 
@@ -1067,6 +1219,33 @@ async function toggleTaskCompletion(id, completed) {
         renderTasks();
     } else {
         alert('Failed to update task');
+        loadTasks(); // Re-fetch to correct state
+    }
+}
+
+async function toggleTaskFavorite(id, favorite) {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`/api/tasks/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            favorite: Boolean(favorite)  // 确保是布尔值
+        })
+    });
+
+    if (res.ok) {
+        // Optimistic update for faster UI response
+        const task = allTasks.find(t => t.ID === id);
+        if (task) {
+            task.favorite = favorite;
+            task.UpdatedAt = new Date().toISOString(); // Update timestamp
+        }
+        renderTasks();
+    } else {
+        alert('Failed to update task favorite status');
         loadTasks(); // Re-fetch to correct state
     }
 }
