@@ -120,13 +120,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Favorites navigation
     const favoritesNav = document.getElementById('favorites-nav');
-    favoritesNav.addEventListener('click', () => {
-        currentView = currentView === 'favorites' ? 'all' : 'favorites';
-        currentTagFilter = null; // Reset tag filter when switching views
-        updateFavoritesNavState();
-        renderTags();
-        renderTasks();
-    });
+    if (favoritesNav) {
+        favoritesNav.addEventListener('click', () => {
+            currentView = currentView === 'favorites' ? 'all' : 'favorites';
+            currentTagFilter = null; // Reset tag filter when switching views
+            updateFavoritesNavState();
+            renderTags();
+            renderTasks();
+        });
+    }
 
     // Search input listener
     document.getElementById('search-input').addEventListener('input', (e) => {
@@ -910,22 +912,15 @@ function renderTasks() {
 }
 
 function updateFavoritesNavState() {
-    const favoritesBtn = document.getElementById('favorites-btn');
-    const allTasksBtn = document.getElementById('all-tasks-btn');
+    const favoritesNav = document.getElementById('favorites-nav');
     
-    if (currentView === 'favorites') {
-        favoritesBtn.classList.add('bg-primary', 'text-white');
-        favoritesBtn.classList.remove('text-secondary', 'hover:bg-gray-100');
-        if (allTasksBtn) {
-            allTasksBtn.classList.remove('bg-primary', 'text-white');
-            allTasksBtn.classList.add('text-secondary', 'hover:bg-gray-100');
-        }
-    } else {
-        favoritesBtn.classList.remove('bg-primary', 'text-white');
-        favoritesBtn.classList.add('text-secondary', 'hover:bg-gray-100');
-        if (allTasksBtn) {
-            allTasksBtn.classList.add('bg-primary', 'text-white');
-            allTasksBtn.classList.remove('text-secondary', 'hover:bg-gray-100');
+    if (favoritesNav) {
+        if (currentView === 'favorites') {
+            favoritesNav.classList.add('bg-primary', 'text-white');
+            favoritesNav.classList.remove('hover:bg-background');
+        } else {
+            favoritesNav.classList.remove('bg-primary', 'text-white');
+            favoritesNav.classList.add('hover:bg-background');
         }
     }
 }
@@ -990,28 +985,11 @@ function createTaskElement(task) {
     const taskContent = document.createElement('div');
     taskContent.className = 'flex-1 min-w-0';
 
-    const content = document.createElement('div');
-    content.className = 'break-all';
-    const contentText = document.createElement('span');
-    contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
-    contentText.textContent = task.content;
-    contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
-    content.appendChild(contentText);
-
-    // 创建标签和日期的容器
-    const tagsDateContainer = document.createElement('div');
-    tagsDateContainer.className = 'flex items-center justify-between mt-2';
-
-    // 标签容器
-    const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'flex flex-wrap gap-1';
-
-    // 日期显示
-    const timestamp = document.createElement('span');
-    timestamp.className = 'text-xs text-secondary flex-shrink-0 ml-2';
+    // 时间显示在左上角
+    const timestamp = document.createElement('div');
+    timestamp.className = 'text-xs text-secondary mb-2';
     const date = new Date(task.completed ? task.UpdatedAt : task.CreatedAt);
-    const label = task.completed ? 'Completed' : 'Created';
-    timestamp.textContent = `${label} ${date.toLocaleString('zh-CN', { 
+    timestamp.textContent = date.toLocaleString('zh-CN', { 
         timeZone: 'Asia/Shanghai', 
         hour12: false, 
         year: 'numeric', 
@@ -1019,10 +997,20 @@ function createTaskElement(task) {
         day: '2-digit', 
         hour: '2-digit', 
         minute: '2-digit' 
-    })}`;
+    });
 
-    tagsDateContainer.appendChild(tagsContainer);
-    tagsDateContainer.appendChild(timestamp);
+    // 任务内容另起一行
+    const content = document.createElement('div');
+    content.className = 'break-words whitespace-pre-wrap mb-2';
+    const contentText = document.createElement('span');
+    contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
+    contentText.textContent = task.content;
+    contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
+    content.appendChild(contentText);
+
+    // 标签容器
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'flex flex-wrap gap-1';
 
     // 添加标签到标签容器
     if (task.tags) {
@@ -1050,12 +1038,13 @@ function createTaskElement(task) {
         });
     }
 
+    taskContent.appendChild(timestamp);
     taskContent.appendChild(content);
-    taskContent.appendChild(tagsDateContainer);
+    taskContent.appendChild(tagsContainer);
 
-    // 操作按钮容器
+    // 操作按钮容器 - 直接显示在右上角
     const actionsContainer = document.createElement('div');
-    actionsContainer.className = 'absolute right-4 top-4 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity';
+    actionsContainer.className = 'absolute right-4 top-4 flex items-center space-x-2 opacity-100';
 
     // 收藏图标按钮
     const favoriteBtn = document.createElement('button');
