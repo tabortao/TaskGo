@@ -27,7 +27,7 @@ let allTasks = [];
 let currentTagFilter = null;
 let currentSearchQuery = '';
 let completedTasksToShow = 10;
-let currentView = 'all'; // 'all' or 'favorites'
+let currentView = 'favorites'; // 'all' or 'favorites'
 
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
@@ -628,6 +628,32 @@ function renderTags() {
             renderTags();
             renderTasks();
         });
+        
+        // 添加右键菜单功能
+        li.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            currentTag = tag;
+            
+            // 定位菜单
+            const rect = e.target.getBoundingClientRect();
+            const scrollY = window.scrollY || document.documentElement.scrollTop;
+            const scrollX = window.scrollX || document.documentElement.scrollLeft;
+            
+            tagMenu.style.top = `${rect.bottom + scrollY + 5}px`;
+            tagMenu.style.left = `${rect.left + scrollX}px`;
+            tagMenu.classList.remove('hidden');
+            
+            // 添加点击其他地方关闭菜单的事件监听
+            setTimeout(() => {
+                const closeMenu = (event) => {
+                    if (!tagMenu.contains(event.target)) {
+                        tagMenu.classList.add('hidden');
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+                document.addEventListener('click', closeMenu);
+            }, 0);
+        });
         tagList.appendChild(li);
     });
 }
@@ -650,31 +676,17 @@ function handleTagClick(event, tagText, taskId) {
     event.preventDefault();
     event.stopPropagation();
     
-    // 存储当前操作的任务ID
-    currentTaskId = taskId;
+    // 点击标签时切换到该标签的任务列表
+    const cleanTagText = tagText.startsWith('#') ? tagText.substring(1) : tagText;
+    currentTagFilter = cleanTagText;
+    currentView = 'all'; // 切换回全部任务视图
     
-    // 确保 tagText 是干净的标签文本，不包含 # 号
-    currentTag = tagText.startsWith('#') ? tagText.substring(1) : tagText;
+    // 更新导航状态
+    updateFavoritesNavState();
     
-    // 定位菜单，考虑滚动位置
-    const rect = event.target.getBoundingClientRect();
-    const scrollY = window.scrollY || document.documentElement.scrollTop;
-    const scrollX = window.scrollX || document.documentElement.scrollLeft;
-    
-    tagMenu.style.top = `${rect.bottom + scrollY + 5}px`;
-    tagMenu.style.left = `${rect.left + scrollX}px`;
-    tagMenu.classList.remove('hidden');
-    
-    // 添加点击其他地方关闭菜单的一次性事件监听
-    setTimeout(() => {
-        const closeMenu = (e) => {
-            if (!tagMenu.contains(e.target) && !e.target.closest('.task-tag')) {
-                tagMenu.classList.add('hidden');
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-        document.addEventListener('click', closeMenu);
-    }, 0);
+    // 重新渲染任务和标签
+    renderTags();
+    renderTasks();
 }
 
 // 关闭标签菜单
@@ -874,17 +886,27 @@ function renderTasks() {
         todoList.appendChild(taskEl);
     });
 
-    // Render Completed tasks with pagination
-    completedTasks.slice(0, completedTasksToShow).forEach(task => {
-        const taskEl = createTaskElement(task);
-        completedList.appendChild(taskEl);
-    });
-
-    // Show or hide the "Show More" button
-    if (completedTasks.length > completedTasksToShow) {
-        showMoreBtn.style.display = 'block';
-    } else {
+    // Render Completed tasks with pagination (except in favorites view)
+    if (currentView === 'favorites') {
+        // 在Favorites页面显示所有已完成任务，不折叠
+        completedTasks.forEach(task => {
+            const taskEl = createTaskElement(task);
+            completedList.appendChild(taskEl);
+        });
         showMoreBtn.style.display = 'none';
+    } else {
+        // 在其他页面使用分页显示
+        completedTasks.slice(0, completedTasksToShow).forEach(task => {
+            const taskEl = createTaskElement(task);
+            completedList.appendChild(taskEl);
+        });
+        
+        // Show or hide the "Show More" button
+        if (completedTasks.length > completedTasksToShow) {
+            showMoreBtn.style.display = 'block';
+        } else {
+            showMoreBtn.style.display = 'none';
+        }
     }
 
     // 如果没有任务，添加空状态提示
@@ -1558,6 +1580,12 @@ function showTaskMenu(event, taskId, isPinned) {
             </svg>
             <span>${pinText}</span>
         </button>
+        <button id="add-tag-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+            <span>Add Tag</span>
+        </button>
         <button id="delete-task-btn" class="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-background flex items-center space-x-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1576,6 +1604,14 @@ function showTaskMenu(event, taskId, isPinned) {
     // 添加事件监听器
     document.getElementById('pin-task-btn').addEventListener('click', () => {
         pinTask(taskId, !isPinned);
+        menu.remove();
+    });
+
+    document.getElementById('add-tag-btn').addEventListener('click', () => {
+        const tagName = prompt('请输入标签名称:');
+        if (tagName && tagName.trim()) {
+            addTagToTask(taskId, tagName.trim());
+        }
         menu.remove();
     });
 
@@ -1756,6 +1792,51 @@ async function addComment(taskId, content) {
         }
     } catch (error) {
         console.error('Error adding comment:', error);
+    }
+}
+
+// 向任务添加标签的函数
+async function addTagToTask(taskId, tagName) {
+    try {
+        // 找到对应的任务
+        const task = allTasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // 获取现有标签
+        const existingTags = task.tags ? task.tags.split(',').filter(tag => tag.trim()) : [];
+        
+        // 检查标签是否已存在
+        if (existingTags.includes(tagName)) {
+            alert('该标签已存在');
+            return;
+        }
+
+        // 添加新标签
+        const newTags = [...existingTags, tagName].join(',');
+
+        // 更新任务
+        const response = await fetch(`/api/tasks/${taskId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                content: task.content,
+                tags: newTags,
+                completed: task.completed,
+                favorite: task.favorite
+            })
+        });
+
+        if (response.ok) {
+            // 重新加载任务列表
+            loadTasks();
+        } else {
+            console.error('Failed to add tag to task');
+        }
+    } catch (error) {
+        console.error('Error adding tag to task:', error);
     }
 }
 
