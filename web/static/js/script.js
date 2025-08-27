@@ -28,6 +28,8 @@ let currentTagFilter = null;
 let currentSearchQuery = '';
 let completedTasksToShow = 10;
 let currentView = 'favorites'; // 'all' or 'favorites'
+let tagAutocompleteVisible = false;
+let currentAutocompleteInput = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem('token');
@@ -87,6 +89,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Task form submission for both desktop and mobile
     document.getElementById('task-form').addEventListener('submit', handleCreateTask);
     document.getElementById('mobile-task-form').addEventListener('submit', handleCreateTask);
+
+    // Setup tag autocomplete for both desktop and mobile inputs
+    setupTagAutocomplete('task-input', 'tag-autocomplete-container');
+    setupTagAutocomplete('mobile-task-input', 'mobile-tag-autocomplete-container');
+    
+    // Setup auto-resize for textareas
+    setupAutoResize('task-input');
+    setupAutoResize('mobile-task-input');
+    
+    // Setup mobile input handling
+    setupMobileInputHandling();
 
     // Add tag button and modal handling
     const addTagBtn = document.getElementById('add-tag-btn');
@@ -544,6 +557,7 @@ async function loadTasks() {
 
     if (res.ok) {
         const { data } = await res.json();
+        console.log('API返回的任务数据:', data); // 调试输出
         allTasks = data || [];
         renderTags();
         renderTasks();
@@ -1011,7 +1025,7 @@ function createTaskElement(task) {
     const timestamp = document.createElement('div');
     timestamp.className = 'text-xs text-secondary mb-2';
     const date = new Date(task.completed ? task.UpdatedAt : task.CreatedAt);
-    timestamp.textContent = date.toLocaleString('zh-CN', { 
+    const dateString = date.toLocaleString('zh-CN', { 
         timeZone: 'Asia/Shanghai', 
         hour12: false, 
         year: 'numeric', 
@@ -1020,6 +1034,8 @@ function createTaskElement(task) {
         hour: '2-digit', 
         minute: '2-digit' 
     });
+    // Add "Pin·" prefix for pinned tasks
+    timestamp.textContent = task.pinned ? `Pin·${dateString}` : dateString;
 
     // 任务内容另起一行
     const content = document.createElement('div');
@@ -1085,10 +1101,19 @@ function createTaskElement(task) {
 
     // 聊天图标按钮
     const commentBtn = document.createElement('button');
-    commentBtn.className = 'text-secondary hover:text-primary focus:opacity-100 transition-colors';
-    commentBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    commentBtn.className = 'text-secondary hover:text-primary focus:opacity-100 transition-colors relative';
+    
+    // Create comment icon with potential count badge
+    let commentHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
     </svg>`;
+    
+    // Add comment count badge if there are comments
+    if (task.comment_count && task.comment_count > 0) {
+        commentHTML += `<span class="absolute -top-0.5 -right-0.5 bg-red-500 text-white rounded-full min-w-2 h-2 flex items-center justify-center px-0.5 text-[8px] leading-none">${task.comment_count}</span>`;
+    }
+    
+    commentBtn.innerHTML = commentHTML;
     commentBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         showCommentModal(task.ID);
@@ -1574,6 +1599,18 @@ function showTaskMenu(event, taskId, isPinned) {
     const pinIcon = isPinned ? 'M16 12V4a4 4 0 00-8 0v8' : 'M16 12V4a4 4 0 00-8 0v8L6 14v2h12v-2l-2-2z';
     
     menu.innerHTML = `
+        <button id="copy-task-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            <span>Copy Task</span>
+        </button>
+        <button id="edit-task-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            <span>Edit Task</span>
+        </button>
         <button id="pin-task-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${pinIcon}" />
@@ -1602,14 +1639,27 @@ function showTaskMenu(event, taskId, isPinned) {
     document.body.appendChild(menu);
 
     // 添加事件监听器
+    document.getElementById('copy-task-btn').addEventListener('click', () => {
+        copyTaskToClipboard(taskId);
+        menu.remove();
+    });
+
+    document.getElementById('edit-task-btn').addEventListener('click', () => {
+        editTaskFromMenu(taskId);
+        menu.remove();
+    });
+
     document.getElementById('pin-task-btn').addEventListener('click', () => {
         pinTask(taskId, !isPinned);
         menu.remove();
     });
 
     document.getElementById('add-tag-btn').addEventListener('click', () => {
+        console.log('Add Tag button clicked for task:', taskId);
         const tagName = prompt('请输入标签名称:');
+        console.log('Tag name entered:', tagName);
         if (tagName && tagName.trim()) {
+            console.log('Calling addTagToTask with:', taskId, tagName.trim());
             addTagToTask(taskId, tagName.trim());
         }
         menu.remove();
@@ -1628,6 +1678,55 @@ function showTaskMenu(event, taskId, isPinned) {
         }
     };
     setTimeout(() => document.addEventListener('click', closeMenu), 0);
+}
+
+// Copy task to clipboard
+function copyTaskToClipboard(taskId) {
+    const task = allTasks.find(t => t.ID === taskId);
+    if (!task) return;
+    
+    // Only copy task content, no tags
+    const taskText = task.content;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(taskText).then(() => {
+        // Show success message
+        showToast('Task copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy task:', err);
+        showToast('Failed to copy task', 'error');
+    });
+}
+
+// Edit task from menu
+function editTaskFromMenu(taskId) {
+    const task = allTasks.find(t => t.ID === taskId);
+    if (!task) return;
+    
+    // Find the task element and trigger edit mode
+    const taskElement = document.querySelector(`[data-id="${taskId}"]`);
+    if (taskElement) {
+        const contentSpan = taskElement.querySelector('.break-words span');
+        if (contentSpan) {
+            editTaskContent(contentSpan, taskId);
+        }
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${
+        type === 'error' ? 'bg-red-500' : 'bg-green-500'
+    }`;
+    toast.textContent = message;
+    
+    document.body.appendChild(toast);
+    
+    // Remove toast after 3 seconds
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
 }
 
 // 评论模态框相关函数
@@ -1754,9 +1853,10 @@ function renderComments(comments) {
         commentEl.className = 'bg-background p-3 rounded-lg';
         
         const date = new Date(comment.CreatedAt);
+        const username = comment.User?.username || '';
         commentEl.innerHTML = `
             <div class="flex items-center justify-between mb-2">
-                <span class="font-medium text-sm">${comment.User?.username || 'Unknown'}</span>
+                ${username ? `<span class="font-medium text-sm">${username}</span>` : '<span class="font-medium text-sm text-secondary">Anonymous</span>'}
                 <span class="text-xs text-secondary">${date.toLocaleString('zh-CN', {
                     timeZone: 'Asia/Shanghai',
                     hour12: false,
@@ -1798,46 +1898,307 @@ async function addComment(taskId, content) {
 // 向任务添加标签的函数
 async function addTagToTask(taskId, tagName) {
     try {
+        console.log('addTagToTask called with taskId:', taskId, 'tagName:', tagName);
+        
         // 找到对应的任务
-        const task = allTasks.find(t => t.id === taskId);
-        if (!task) return;
+        const task = allTasks.find(t => t.ID === taskId);
+        console.log('Found task:', task);
+        if (!task) {
+            console.error('Task not found with ID:', taskId);
+            return;
+        }
 
         // 获取现有标签
-        const existingTags = task.tags ? task.tags.split(',').filter(tag => tag.trim()) : [];
+        const existingTags = task.tags ? task.tags.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+        console.log('Existing tags:', existingTags);
         
         // 检查标签是否已存在
         if (existingTags.includes(tagName)) {
-            alert('该标签已存在');
+            console.log('Tag already exists:', tagName);
+            showToast('该标签已存在', 'error');
             return;
         }
 
         // 添加新标签
         const newTags = [...existingTags, tagName].join(',');
+        console.log('New tags string:', newTags);
 
         // 更新任务
+        const requestBody = {
+            content: task.content,
+            tags: newTags,
+            completed: task.completed,
+            favorite: task.favorite
+        };
+        console.log('Request body:', requestBody);
+        
         const response = await fetch(`/api/tasks/${taskId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
-            body: JSON.stringify({
-                content: task.content,
-                tags: newTags,
-                completed: task.completed,
-                favorite: task.favorite
-            })
+            body: JSON.stringify(requestBody)
         });
 
+        console.log('Response status:', response.status);
         if (response.ok) {
+            console.log('Tag added successfully, reloading tasks');
+            showToast('标签添加成功', 'success');
             // 重新加载任务列表
             loadTasks();
         } else {
-            console.error('Failed to add tag to task');
+            const errorText = await response.text();
+            console.error('Failed to add tag to task. Status:', response.status, 'Error:', errorText);
+            showToast('添加标签失败', 'error');
         }
     } catch (error) {
         console.error('Error adding tag to task:', error);
+        showToast('添加标签时发生错误', 'error');
     }
+}
+
+// Auto-resize textarea functionality
+function setupAutoResize(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    
+    input.addEventListener('input', () => {
+        autoResizeTextarea(input);
+    });
+    
+    // Initial resize
+    autoResizeTextarea(input);
+}
+
+function autoResizeTextarea(textarea) {
+    textarea.style.height = 'auto';
+    const newHeight = Math.min(Math.max(textarea.scrollHeight, 48), 200);
+    textarea.style.height = newHeight + 'px';
+}
+
+// Mobile input handling for better UX
+function setupMobileInputHandling() {
+    const mobileInput = document.getElementById('mobile-task-input');
+    if (!mobileInput) return;
+    
+    let isComposing = false;
+    
+    // Handle composition events (for IME input)
+    mobileInput.addEventListener('compositionstart', () => {
+        isComposing = true;
+    });
+    
+    mobileInput.addEventListener('compositionend', () => {
+        isComposing = false;
+    });
+    
+    // Handle keydown events
+    mobileInput.addEventListener('keydown', (e) => {
+        // If user is composing (using IME), don't interfere
+        if (isComposing) return;
+        
+        // Handle Enter key
+        if (e.key === 'Enter') {
+            // Check if Shift is pressed for line break
+            if (e.shiftKey) {
+                // Allow default behavior (line break)
+                return;
+            } else {
+                // Submit the form
+                e.preventDefault();
+                const form = document.getElementById('mobile-task-form');
+                if (mobileInput.value.trim()) {
+                    form.dispatchEvent(new Event('submit'));
+                }
+            }
+        }
+    });
+    
+    // Add visual indicator for Shift+Enter
+    const helpText = document.createElement('div');
+    helpText.className = 'text-xs text-secondary mt-1 px-1';
+    helpText.textContent = 'Press Enter to send, Shift+Enter for new line';
+    
+    const mobileForm = document.getElementById('mobile-task-form');
+    const formContainer = mobileForm.querySelector('.relative');
+    formContainer.appendChild(helpText);
+}
+
+// Tag autocomplete functionality
+function setupTagAutocomplete(inputId, containerId) {
+    const input = document.getElementById(inputId);
+    const container = document.getElementById(containerId);
+    
+    if (!input || !container) return;
+    
+    input.addEventListener('input', (e) => {
+        handleTagAutocomplete(e, container);
+    });
+    
+    input.addEventListener('keydown', (e) => {
+        if (tagAutocompleteVisible && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Tab')) {
+            handleAutocompleteNavigation(e, container);
+        }
+    });
+    
+    // Close autocomplete when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !container.contains(e.target)) {
+            hideTagAutocomplete(container);
+        }
+    });
+}
+
+function handleTagAutocomplete(event, container) {
+    const input = event.target;
+    const value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    // Find if cursor is after a # character
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const hashMatch = textBeforeCursor.match(/#([^\s#]*)$/);
+    
+    if (hashMatch) {
+        const searchTerm = hashMatch[1].toLowerCase();
+        const availableTags = getAvailableTags();
+        const filteredTags = availableTags.filter(tag => 
+            tag.toLowerCase().includes(searchTerm)
+        );
+        
+        if (filteredTags.length > 0) {
+            showTagAutocomplete(container, filteredTags, input, hashMatch.index + 1);
+        } else {
+            hideTagAutocomplete(container);
+        }
+    } else {
+        hideTagAutocomplete(container);
+    }
+}
+
+function getAvailableTags() {
+    const tags = new Set();
+    allTasks.forEach(task => {
+        if (task.tags) {
+            task.tags.split(',').forEach(tag => {
+                const trimmedTag = tag.trim();
+                if (trimmedTag) {
+                    tags.add(trimmedTag);
+                }
+            });
+        }
+    });
+    return Array.from(tags).sort();
+}
+
+function showTagAutocomplete(container, tags, input, hashPosition) {
+    container.innerHTML = '';
+    container.classList.remove('hidden');
+    tagAutocompleteVisible = true;
+    currentAutocompleteInput = input;
+    
+    const tagsWrapper = document.createElement('div');
+    tagsWrapper.className = 'p-3';
+    
+    const title = document.createElement('div');
+    title.className = 'text-xs text-secondary mb-2 font-medium';
+    title.textContent = 'Select a tag:';
+    tagsWrapper.appendChild(title);
+    
+    const tagsContainer = document.createElement('div');
+    tagsContainer.className = 'flex flex-wrap gap-2 max-h-32 overflow-y-auto';
+    
+    tags.forEach((tag, index) => {
+        const tagEl = document.createElement('button');
+        tagEl.type = 'button';
+        tagEl.className = 'tag-autocomplete-item px-3 py-1.5 text-sm rounded-md border border-border hover:bg-background focus:bg-background focus:outline-none transition-colors';
+        tagEl.style.backgroundColor = `${getTagColor(tag)}20`;
+        tagEl.style.color = getTagColor(tag);
+        tagEl.textContent = tag;
+        tagEl.dataset.index = index;
+        
+        tagEl.addEventListener('click', () => {
+            selectTag(tag, input, hashPosition);
+        });
+        
+        tagsContainer.appendChild(tagEl);
+    });
+    
+    tagsWrapper.appendChild(tagsContainer);
+    container.appendChild(tagsWrapper);
+    
+    // Focus first item
+    const firstItem = container.querySelector('.tag-autocomplete-item');
+    if (firstItem) {
+        firstItem.classList.add('bg-background');
+    }
+}
+
+function hideTagAutocomplete(container) {
+    container.classList.add('hidden');
+    tagAutocompleteVisible = false;
+    currentAutocompleteInput = null;
+}
+
+function handleAutocompleteNavigation(event, container) {
+    event.preventDefault();
+    
+    const items = container.querySelectorAll('.tag-autocomplete-item');
+    const currentIndex = Array.from(items).findIndex(item => item.classList.contains('bg-background'));
+    
+    if (event.key === 'ArrowDown') {
+        const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        updateAutocompleteSelection(items, nextIndex);
+    } else if (event.key === 'ArrowUp') {
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        updateAutocompleteSelection(items, prevIndex);
+    } else if (event.key === 'Enter' || event.key === 'Tab') {
+        if (currentIndex >= 0 && items[currentIndex]) {
+            items[currentIndex].click();
+        }
+    }
+}
+
+function updateAutocompleteSelection(items, newIndex) {
+    items.forEach((item, index) => {
+        if (index === newIndex) {
+            item.classList.add('bg-background');
+        } else {
+            item.classList.remove('bg-background');
+        }
+    });
+}
+
+function selectTag(tag, input, hashPosition) {
+    const value = input.value;
+    const cursorPos = input.selectionStart;
+    
+    // Find the # position and replace the partial tag
+    const textBeforeCursor = value.substring(0, cursorPos);
+    const hashMatch = textBeforeCursor.match(/#([^\s#]*)$/);
+    
+    if (hashMatch) {
+        const beforeHash = value.substring(0, hashMatch.index);
+        const afterCursor = value.substring(cursorPos);
+        const newValue = beforeHash + '#' + tag + ' ' + afterCursor;
+        
+        input.value = newValue;
+        const newCursorPos = hashMatch.index + tag.length + 2; // +2 for # and space
+        input.setSelectionRange(newCursorPos, newCursorPos);
+        
+        // Auto-resize textarea
+        if (typeof autoResizeTextarea === 'function') {
+            autoResizeTextarea(input);
+        }
+    }
+    
+    // Hide autocomplete
+    const container = input.id === 'task-input' ? 
+        document.getElementById('tag-autocomplete-container') : 
+        document.getElementById('mobile-tag-autocomplete-container');
+    hideTagAutocomplete(container);
+    
+    input.focus();
 }
 
 if ('serviceWorker' in navigator) {

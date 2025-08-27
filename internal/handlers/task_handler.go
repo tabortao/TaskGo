@@ -100,12 +100,25 @@ func CreateTask(db *gorm.DB) gin.HandlerFunc {
 
 func GetTasks(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var tasks []models.Task
+		// var tasks []models.Task
 		userID, _ := c.Get("userID")
 
-		db.Where("user_id = ?", userID).Order("created_at desc").Find(&tasks)
+		// 查询任务并计算评论数量
+		type TaskWithCommentCount struct {
+			models.Task
+			CommentCount int64 `json:"comment_count"`
+		}
 
-		c.JSON(http.StatusOK, gin.H{"data": tasks})
+		var tasksWithCount []TaskWithCommentCount
+		db.Table("tasks").
+			Select("tasks.*, COUNT(comments.id) as comment_count").
+			Joins("LEFT JOIN comments ON tasks.id = comments.task_id").
+			Where("tasks.user_id = ?", userID).
+			Group("tasks.id").
+			Order("tasks.created_at desc").
+			Find(&tasksWithCount)
+
+		c.JSON(http.StatusOK, gin.H{"data": tasksWithCount})
 	}
 }
 
@@ -127,7 +140,7 @@ func UpdateTask(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		// 只允许更新部分字段
-        allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true, "favorite": true}
+		allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true, "favorite": true}
 		updateFields := make(map[string]interface{})
 		for k, v := range input {
 			if allowed[k] {
@@ -178,7 +191,7 @@ func GetTaskComments(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		var comments []models.Comment
-		db.Where("task_id = ?", taskID).Order("created_at asc").Find(&comments)
+		db.Preload("User").Where("task_id = ?", taskID).Order("created_at asc").Find(&comments)
 
 		c.JSON(http.StatusOK, gin.H{"data": comments})
 	}
