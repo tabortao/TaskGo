@@ -11,22 +11,8 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
     <link rel="manifest" href="/static/icons/site.webmanifest">
     <link rel="stylesheet" href="/static/css/style.css">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#2563eb',
-                        secondary: '#64748b',
-                        success: '#22c55e',
-                        background: '#f8fafc',
-                        surface: '#ffffff',
-                        border: '#e2e8f0'
-                    }
-                }
-            }
-        }
-    </script>
+    <script src="/static/js/tailwind_config.js"></script>
+    <link rel="stylesheet" href="/static/css/theme.css">
 </head>
 <body class="bg-background text-gray-800 antialiased">
     <!-- 登录/注册界面 -->
@@ -93,7 +79,7 @@
                     </button>
                     <div class="flex items-center space-x-2">
                         <img id="mobile-logo" src="/static/icons/logo.png" alt="Logo" class="h-8 w-8 cursor-pointer">
-                        <h1 class="text-xl font-semibold text-gray-900">TaskGo</h1>
+                        <h1 class="text-xl font-semibold">TaskGo</h1>
                     </div>
                 </div>
                 <!-- 移动端搜索栏 -->
@@ -197,7 +183,7 @@
                     <div class="flex items-center justify-between w-full max-w-screen-xl mx-auto">
                         <div class="flex items-center space-x-3">
                             <img id="desktop-logo" src="/static/icons/logo.png" alt="Logo" class="h-8 w-8 cursor-pointer">
-                            <h1 class="text-xl font-semibold text-gray-900">TaskGo</h1>
+                            <h1 class="text-xl font-semibold">TaskGo</h1>
                         </div>
                         <div class="w-72">
                             <div class="relative">
@@ -377,6 +363,28 @@
                     </div>
                 </form>
 
+                <!-- 主题外观设置 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-secondary mb-2">Theme Appearance</h3>
+                    <div class="space-y-2">
+                        <div class="flex items-center space-x-2">
+                            <input type="radio" id="theme-light" name="theme-mode" value="light" 
+                                   class="w-4 h-4 text-primary focus:ring-primary">
+                            <label for="theme-light" class="text-sm">Light</label>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="radio" id="theme-dark" name="theme-mode" value="dark" 
+                                   class="w-4 h-4 text-primary focus:ring-primary">
+                            <label for="theme-dark" class="text-sm">Dark</label>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <input type="radio" id="theme-system" name="theme-mode" value="system" 
+                                   class="w-4 h-4 text-primary focus:ring-primary">
+                            <label for="theme-system" class="text-sm">System</label>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 密码修改 -->
                 <form id="password-form">
                     <h3 class="text-sm font-medium text-secondary mb-2">CHANGE PASSWORD</h3>

@@ -1,0 +1,32 @@
+/* 深色模式样式 */
+.dark {
+    --tw-bg-opacity: 1;
+    --tw-text-opacity: 1;
+    --tw-border-opacity: 1;
+    color-scheme: dark;
+}
+
+.dark body {
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+.dark .bg-surface {
+    background-color: #0f172a;
+}
+
+.dark .bg-background {
+    background-color: #1e293b;
+}
+
+.dark .border-border {
+    border-color: #334155;
+}
+
+.dark .text-gray-800 {
+    color: #e2e8f0;
+}
+
+.dark .text-secondary {
+    color: #94a3b8;
+}

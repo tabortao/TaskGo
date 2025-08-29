@@ -34,7 +34,47 @@ let currentView = 'all'; // 'all' or 'favorites'
 let tagAutocompleteVisible = false;
 let currentAutocompleteInput = null;
 
+// 主题模式设置
+let currentTheme = localStorage.getItem('theme-mode') || 'system';
+
+// 应用主题模式
+function applyTheme(theme) {
+    // 保存当前主题设置到本地存储
+    localStorage.setItem('theme-mode', theme);
+    currentTheme = theme;
+    
+    // 根据主题模式设置应用深色或浅色模式
+    if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else if (theme === 'light') {
+        document.documentElement.classList.remove('dark');
+    } else if (theme === 'system') {
+        // 根据系统偏好设置主题
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+    }
+}
+
+// 监听系统主题变化
+if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+        if (currentTheme === 'system') {
+            if (e.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    // 应用保存的主题设置
+    applyTheme(currentTheme);
+    
     const token = localStorage.getItem('token');
     if (token) {
         showApp();
@@ -74,6 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
     settingsBtn.addEventListener('click', (e) => {
         e.preventDefault();
         settingsModal.style.display = 'flex';
+        
+        // 设置当前主题选项
+        document.querySelector(`input[name="theme-mode"][value="${currentTheme}"]`).checked = true;
     });
 
     closeBtn.addEventListener('click', () => {
@@ -88,6 +131,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('avatar-form').addEventListener('submit', handleAvatarUpload);
     document.getElementById('password-form').addEventListener('submit', handlePasswordChange);
+    
+    // 主题模式切换事件监听
+    document.querySelectorAll('input[name="theme-mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                applyTheme(e.target.value);
+            }
+        });
+    });
 
     // Task form submission for both desktop and mobile
     document.getElementById('task-form').addEventListener('submit', handleCreateTask);

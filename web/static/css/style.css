@@ -5,6 +5,17 @@
     --task-border: rgba(226, 232, 240, 0.8);
     --task-border-hover: rgba(37, 99, 235, 0.2);
     --delete-hover: rgba(239, 68, 68, 0.1);
+    --task-content-color: #1e293b;
+    --header-text-color: #1a202c;
+}
+
+.dark {
+    --task-content-color: #e2e8f0;
+    --header-text-color: #f7fafc;
+}
+
+h1 {
+    color: var(--header-text-color);
 }
 
 .task-item {
@@ -21,6 +32,11 @@
 .task-item:hover {
     border-color: var(--task-border-hover);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.dark .task-item:hover {
+    border-color: transparent;
+    box-shadow: none;
 }
 
 .task-checkbox {
@@ -40,7 +56,7 @@
 .task-content {
     flex: 1;
     font-size: 0.875rem;
-    color: #1e293b;
+    color: var(--task-content-color);
     margin-right: 1rem;
 }
 
