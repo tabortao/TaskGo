@@ -2143,7 +2143,7 @@ function showTagAutocomplete(container, tags, input, hashPosition) {
     
     const title = document.createElement('div');
     title.className = 'tag-autocomplete-title';
-    title.textContent = '选择标签:';
+    // title.textContent = '选择标签:';
     tagsWrapper.appendChild(title);
     
     const tagsContainer = document.createElement('div');
