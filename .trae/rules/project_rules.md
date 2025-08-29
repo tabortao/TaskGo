@@ -7,7 +7,7 @@ This file provides guidance to Trae (trae.ai) when working with code in this rep
 2. 项目采用project_rules.md规范，所有代码均需要符合project_rules.md规范。
 3. 代码需有中文注释
 4. 后端代码未修改时，不需要重新编译，后端编译需遵循`Development Commands`中的命令。
-5. 前端代码修改后，不需要重启，项目支持刷新热加载。
+5. 前端代码修改后，先关闭现已启动的执行了`taskgo.exe`命令的终端，再重新启动执行`.\taskgo.exe`，然后刷新预览界面。
 6. 项目目录结构规范：
    - web/: 存放前端静态资源和模板
      - static/: 静态资源(css/js/images)
@@ -49,3 +49,4 @@ go build -o taskgo.exe ./cmd/main.go
 # Run the application
 .\taskgo.exe 
 ```
+项目启动页面：http://localhost:8080/
