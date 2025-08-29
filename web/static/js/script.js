@@ -2020,18 +2020,10 @@ function setupMobileInputHandling() {
         
         // Handle Enter key
         if (e.key === 'Enter') {
-            // Check if Shift is pressed for line break
-            if (e.shiftKey) {
-                // Allow default behavior (line break)
-                return;
-            } else {
-                // Submit the form
-                e.preventDefault();
-                const form = document.getElementById('mobile-task-form');
-                if (mobileInput.value.trim()) {
-                    form.dispatchEvent(new Event('submit'));
-                }
-            }
+            // 在移动端，Enter键默认行为是换行，而不是提交
+            // 阻止默认的提交行为，允许换行
+            // 如果需要提交，用户应点击发送按钮
+            return; // 允许默认的换行行为
         }
     });
     
