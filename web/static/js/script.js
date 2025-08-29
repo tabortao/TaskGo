@@ -329,81 +329,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    function handleTagAutocomplete(input, container) {
-        const cursorPos = input.selectionStart;
-        const textBeforeCursor = input.value.substring(0, cursorPos);
-        const tagMatch = textBeforeCursor.match(/#([^\s#]*)$/);
-
-        if (tagMatch) {
-            const currentTagQuery = tagMatch[1];
-            const allTags = [...new Set(allTasks.flatMap(task => task.tags ? task.tags.split(',') : []))].filter(Boolean);
-            console.log('All Tags:', allTags); // Debugging
-            const matchingTags = allTags.filter(tag => tag.toLowerCase().includes(currentTagQuery.toLowerCase()));
-            console.log('Matching Tags:', matchingTags); // Debugging
-            
-            showAutocomplete(matchingTags, currentTagQuery, input, container);
-        } else {
-            hideAutocomplete(container);
-        }
-    }
-
-    // 桌面端输入监听
-    taskInput.addEventListener('input', () => {
-        handleTagAutocomplete(taskInput, autocompleteContainer);
-    });
-
-    // 移动端输入监听
-    mobileTaskInput.addEventListener('input', () => {
-        handleTagAutocomplete(mobileTaskInput, mobileAutocompleteContainer);
-    });
-
-    function showAutocomplete(tags, query, input, container) {
-        // 当查询为空时，显示最近使用的5个标签
-        if (query === '') {
-            const recentTags = allTasks
-                .flatMap(task => task.tags ? task.tags.split(',') : [])
-                .filter(Boolean)
-                .reverse()
-                .slice(0, 5);
-            tags = [...new Set(recentTags)];
-        }
-        
-        if (tags.length === 0) {
-            hideAutocomplete(container);
-            return;
-        }
-        container.innerHTML = '';
-        tags.forEach(tag => {
-            const div = document.createElement('div');
-            div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-            div.textContent = tag;
-            div.addEventListener('mousedown', (e) => {
-                e.preventDefault(); // Prevent input from losing focus
-                const textBeforeCursor = input.value.substring(0, input.selectionStart);
-                const textAfterCursor = input.value.substring(input.selectionStart);
-                
-                const newTextBefore = textBeforeCursor.replace(/#([^\s#]*)$/, `#${tag} `);
-                
-                input.value = newTextBefore + textAfterCursor;
-                hideAutocomplete(container);
-                input.focus();
-            });
-            container.appendChild(div);
-        });
-        container.style.display = 'block';
-    }
-
-    function hideAutocomplete(container) {
-        container.style.display = 'none';
-    }
-
     // 处理输入框失焦
     taskInput.addEventListener('blur', () => {
-        setTimeout(() => hideAutocomplete(autocompleteContainer), 150);
+        setTimeout(() => hideTagAutocomplete(autocompleteContainer), 150);
     });
 
     mobileTaskInput.addEventListener('blur', () => {
-        setTimeout(() => hideAutocomplete(mobileAutocompleteContainer), 150);
+        setTimeout(() => hideTagAutocomplete(mobileAutocompleteContainer), 150);
     });
     // --- End Tag Autocomplete Logic ---
 
@@ -2028,13 +1960,13 @@ function setupMobileInputHandling() {
     });
     
     // Add visual indicator for Shift+Enter
-    const helpText = document.createElement('div');
-    helpText.className = 'text-xs text-secondary mt-1 px-1';
-    helpText.textContent = 'Press Enter to send, Shift+Enter for new line';
+    // const helpText = document.createElement('div');
+    // helpText.className = 'text-xs text-secondary mt-1 px-1';
+    // helpText.textContent = 'Press Enter to send, Shift+Enter for new line';
     
     const mobileForm = document.getElementById('mobile-task-form');
     const formContainer = mobileForm.querySelector('.relative');
-    formContainer.appendChild(helpText);
+    // formContainer.appendChild(helpText);
 }
 
 // Tag autocomplete functionality
