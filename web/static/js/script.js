@@ -333,7 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tagMatch) {
             const currentTagQuery = tagMatch[1];
             const allTags = [...new Set(allTasks.flatMap(task => task.tags ? task.tags.split(',') : []))].filter(Boolean);
-            const matchingTags = allTags.filter(tag => tag.toLowerCase().startsWith(currentTagQuery.toLowerCase()));
+            console.log('All Tags:', allTags); // Debugging
+            const matchingTags = allTags.filter(tag => tag.toLowerCase().includes(currentTagQuery.toLowerCase()));
+            console.log('Matching Tags:', matchingTags); // Debugging
             
             showAutocomplete(matchingTags, currentTagQuery, input, container);
         } else {
