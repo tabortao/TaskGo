@@ -1518,12 +1518,16 @@ function setupMobileNavigation() {
             toggleSidebarCollapse(!sidebar.classList.contains('collapsed'));
         });
 
-        // 添加双击侧边栏切换功能
-        sidebar.addEventListener('dblclick', (e) => {
-            if (window.innerWidth >= 1024 && e.target.closest('#sidebar')) {
-                toggleSidebarCollapse(!sidebar.classList.contains('collapsed'));
-            }
-        });
+        // 添加单击侧边栏顶部切换功能
+        const sidebarHeader = document.querySelector('#sidebar .p-4.border-b');
+        if (sidebarHeader) {
+            sidebarHeader.addEventListener('click', (e) => {
+                // 确保点击的是侧边栏顶部区域，而不是用户菜单或关闭按钮
+                if (window.innerWidth >= 1024 && !e.target.closest('#user-menu') && !e.target.closest('#desktop-sidebar-toggle')) {
+                    toggleSidebarCollapse(!sidebar.classList.contains('collapsed'));
+                }
+            });
+        }
     }
 
     // 搜索功能同步
