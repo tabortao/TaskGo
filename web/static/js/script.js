@@ -354,6 +354,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function showAutocomplete(tags, query, input, container) {
+        // 当查询为空时，显示最近使用的5个标签
+        if (query === '') {
+            const recentTags = allTasks
+                .flatMap(task => task.tags ? task.tags.split(',') : [])
+                .filter(Boolean)
+                .reverse()
+                .slice(0, 5);
+            tags = [...new Set(recentTags)];
+        }
+        
         if (tags.length === 0) {
             hideAutocomplete(container);
             return;
