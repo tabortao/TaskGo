@@ -170,6 +170,42 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMoreCompletedTasks();
         }
     });
+    
+    // Logo 点击事件 - 返回顶部并聚焦到任务输入框
+    const mobileLogo = document.getElementById('mobile-logo');
+    const desktopLogo = document.getElementById('desktop-logo');
+    
+    if (mobileLogo) {
+        mobileLogo.addEventListener('click', () => {
+            // 平滑滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // 滚动完成后聚焦到移动端输入框
+            setTimeout(() => {
+                const mobileInput = document.getElementById('mobile-task-input');
+                if (mobileInput) {
+                    mobileInput.focus();
+                    // 确保输入框可见（如果被键盘遮挡）
+                    mobileInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 500); // 给滚动一些时间完成
+        });
+    }
+    
+    if (desktopLogo) {
+        desktopLogo.addEventListener('click', () => {
+            // 平滑滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            // 滚动完成后聚焦到桌面端输入框
+            setTimeout(() => {
+                const desktopInput = document.getElementById('task-input');
+                if (desktopInput) {
+                    desktopInput.focus();
+                }
+            }, 500); // 给滚动一些时间完成
+        });
+    }
 
     // Sidebar toggle listener
     const sidebar = document.getElementById('sidebar');
