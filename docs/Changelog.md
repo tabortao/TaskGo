@@ -1,5 +1,47 @@
 # 更新日志
 
+## v0.2.3
+
+**English description**
+**Release time:** 2025-8-29
+
+✨ **New Features**
+
+- Added dark mode support and refactored theme configuration
+- Added click logo to return to top and focus input box functionality
+
+🐛 **Bug Fixes**
+
+- Fixed keyboard event handling logic for input boxes on desktop and mobile
+- Unified search box placeholder text and removed tag autocomplete feature
+- Adjusted theme configuration loading priority
+
+🔧 **Optimizations**
+
+- Optimized theme switching performance
+- Improved input box focus state visual feedback
+
+---
+
+**中文说明**
+**发布时间:** 2025-8-29
+
+✨ **新增功能**
+
+- 添加深色模式支持并重构主题配置
+- 添加点击 Logo 返回顶部并聚焦输入框功能
+
+🐛 **问题修复**
+
+- 修正桌面端和移动端输入框的键盘事件处理逻辑
+- 统一搜索框占位符文本并移除标签自动完成功能
+- 调整主题配置加载优先级
+
+🚀 **优化改进**
+
+- 优化主题切换性能
+- 改进输入框聚焦状态视觉反馈
+
 ## v0.2.2
 
 **发布时间:** 2025-8-29
