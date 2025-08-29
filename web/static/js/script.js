@@ -225,10 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
         todoSection.classList.remove('collapsed');
     }
 
-    // 默认折叠已完成任务列表
-    completedSection.classList.add('collapsed');
-    completedSection.querySelector('.task-section-header svg').style.transform = 'rotate(-90deg)';
-    localStorage.setItem('completed-collapsed', 'true');
+    // 默认展开已完成任务列表
+    completedSection.classList.remove('collapsed');
+    completedSection.querySelector('.task-section-header svg').style.transform = '';
+    localStorage.setItem('completed-collapsed', 'false');
 
     todoSection.querySelector('.task-section-header').addEventListener('click', () => {
         const isCollapsed = todoSection.classList.toggle('collapsed');
