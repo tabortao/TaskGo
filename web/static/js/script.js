@@ -2079,9 +2079,12 @@ function handleTagAutocomplete(event, container) {
         }
         
         // 否则进行模糊搜索匹配
-        const filteredTags = availableTags.filter(tag => 
-            tag.toLowerCase().includes(searchTerm)
-        );
+        const filteredTags = availableTags.filter(tag => {
+            // 将标签转为小写进行比较
+            const lowerTag = tag.toLowerCase();
+            // 检查标签是否包含搜索词
+            return lowerTag.includes(searchTerm);
+        });
         
         if (filteredTags.length > 0) {
             showTagAutocomplete(container, filteredTags, input, hashMatch.index + 1);
