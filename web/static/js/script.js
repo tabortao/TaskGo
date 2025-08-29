@@ -27,7 +27,7 @@ let allTasks = [];
 let currentTagFilter = null;
 let currentSearchQuery = '';
 let completedTasksToShow = 10;
-let currentView = 'favorites'; // 'all' or 'favorites'
+let currentView = 'all'; // 'all' or 'favorites'
 let tagAutocompleteVisible = false;
 let currentAutocompleteInput = null;
 
@@ -131,12 +131,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle create tag form submission
     createTagForm.addEventListener('submit', handleCreateTag);
 
-    // Favorites navigation
+    // Main navigation items
+    const allTasksNav = document.getElementById('all-tasks-nav');
     const favoritesNav = document.getElementById('favorites-nav');
+
+    if (allTasksNav) {
+        allTasksNav.addEventListener('click', () => {
+            currentView = 'all';
+            currentTagFilter = null; // Reset tag filter
+            updateFavoritesNavState();
+            renderTags();
+            renderTasks();
+        });
+    }
+
     if (favoritesNav) {
         favoritesNav.addEventListener('click', () => {
-            currentView = currentView === 'favorites' ? 'all' : 'favorites';
-            currentTagFilter = null; // Reset tag filter when switching views
+            currentView = 'favorites';
+            currentTagFilter = null; // Reset tag filter
             updateFavoritesNavState();
             renderTags();
             renderTasks();
@@ -566,42 +578,13 @@ async function loadTasks() {
     }
 }
 
-// NEW: Render the list of unique tags in the sidebar
+// Render the list of unique tags in the sidebar
+// 渲染标签列表
 function renderTags() {
     const tagList = document.getElementById('tag-list');
     tagList.innerHTML = '';
 
-    // Add an "All" filter option
-    const allLi = document.createElement('li');
-    const allContent = document.createElement('div');
-    allContent.className = 'flex items-center space-x-2';
-    
-    // Add icon
-    const allIcon = document.createElement('svg');
-    allIcon.className = 'tag-icon w-4 h-4 text-secondary';
-    allIcon.setAttribute('fill', 'none');
-    allIcon.setAttribute('stroke', 'currentColor');
-    allIcon.setAttribute('viewBox', '0 0 24 24');
-    allIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />';
-    
-    // Add text
-    const allText = document.createElement('span');
-    allText.className = 'tag-text';
-    allText.textContent = 'All Tasks';
-    
-    allContent.appendChild(allIcon);
-    allContent.appendChild(allText);
-    allLi.appendChild(allContent);
-    
-    allLi.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === null ? 'bg-blue-500 text-white' : ''}`;
-    allLi.addEventListener('click', () => {
-        currentTagFilter = null;
-        renderTags();
-        renderTasks();
-    });
-    tagList.appendChild(allLi);
-
-    // Get unique tags
+    // 获取所有任务中的唯一标签
     const tags = [...new Set(allTasks.flatMap(task => task.tags ? task.tags.split(',') : []))];
     
     tags.forEach(tag => {
@@ -610,7 +593,7 @@ function renderTags() {
         const content = document.createElement('div');
         content.className = 'flex items-center space-x-2';
         
-        // Add tag icon
+        // 添加标签图标
         const tagIcon = document.createElement('svg');
         tagIcon.className = 'tag-icon w-4 h-4';
         tagIcon.setAttribute('fill', 'none');
@@ -619,7 +602,7 @@ function renderTags() {
         tagIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />';
         tagIcon.style.color = getTagColor(tag);
         
-        // Add tag text
+        // 添加标签文本
         const tagText = document.createElement('span');
         tagText.className = 'tag-text';
         tagText.textContent = tag;
@@ -628,7 +611,7 @@ function renderTags() {
         content.appendChild(tagText);
         li.appendChild(content);
         
-        li.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === tag ? 'bg-blue-500 text-white' : ''}`;
+        li.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === tag ? 'bg-primary text-white' : ''}`;
         
         if (currentTagFilter !== tag) {
             const tagColor = getTagColor(tag);
@@ -639,6 +622,9 @@ function renderTags() {
         
         li.addEventListener('click', () => {
             currentTagFilter = tag;
+            // 当点击标签时，将 currentView 设置为 'all'，确保只显示该标签下的所有任务
+            currentView = 'all'; 
+            updateFavoritesNavState(); // 更新导航状态以反映 currentView 的变化
             renderTags();
             renderTasks();
         });
@@ -945,18 +931,31 @@ function renderTasks() {
         }
         completedList.appendChild(emptyState);
     }
+    updateFavoritesNavState(); // 更新导航状态
 }
 
+// 更新导航状态
 function updateFavoritesNavState() {
+    const allTasksNav = document.getElementById('all-tasks-nav');
     const favoritesNav = document.getElementById('favorites-nav');
-    
+
+    if (allTasksNav) {
+        if (currentView === 'all') {
+            allTasksNav.classList.add('bg-primary', 'text-white');
+            allTasksNav.classList.remove('hover:bg-gray-100');
+        } else {
+            allTasksNav.classList.remove('bg-primary', 'text-white');
+            allTasksNav.classList.add('hover:bg-gray-100');
+        }
+    }
+
     if (favoritesNav) {
         if (currentView === 'favorites') {
             favoritesNav.classList.add('bg-primary', 'text-white');
-            favoritesNav.classList.remove('hover:bg-background');
+            favoritesNav.classList.remove('hover:bg-gray-100');
         } else {
             favoritesNav.classList.remove('bg-primary', 'text-white');
-            favoritesNav.classList.add('hover:bg-background');
+            favoritesNav.classList.add('hover:bg-gray-100');
         }
     }
 }
