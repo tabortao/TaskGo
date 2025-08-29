@@ -299,34 +299,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 为两个输入框添加自动调整高度的功能和键盘事件处理
-    [taskInput, mobileTaskInput].forEach(textarea => {
-        // 初始化高度
-        autoResizeTextarea(textarea);
-        
-        // 监听输入事件
-        textarea.addEventListener('input', () => {
-            autoResizeTextarea(textarea);
-        });
-        
-        // 添加键盘事件处理
-        textarea.addEventListener('keydown', (e) => {
-            // Enter键提交表单
-            if (e.key === 'Enter' && !e.altKey && !e.shiftKey && !e.ctrlKey) {
-                e.preventDefault();
-                const form = textarea.closest('form');
-                form.dispatchEvent(new Event('submit'));
-            }
-            // Alt+Enter插入换行
-            else if (e.key === 'Enter' && e.altKey) {
-                e.preventDefault();
-                const start = textarea.selectionStart;
-                const end = textarea.selectionEnd;
-                const value = textarea.value;
-                textarea.value = value.substring(0, start) + '\n' + value.substring(end);
-                textarea.selectionStart = textarea.selectionEnd = start + 1;
-                autoResizeTextarea(textarea);
-            }
-        });
+    // 为桌面端输入框添加自动调整高度的功能和键盘事件处理
+    taskInput.addEventListener('input', () => {
+        autoResizeTextarea(taskInput);
+    });
+    taskInput.addEventListener('keydown', (e) => {
+        // Shift+Enter插入换行
+        if (e.key === 'Enter' && e.shiftKey) {
+            e.preventDefault();
+            const start = taskInput.selectionStart;
+            const end = taskInput.selectionEnd;
+            const value = taskInput.value;
+            taskInput.value = value.substring(0, start) + '\n' + value.substring(end);
+            taskInput.selectionStart = taskInput.selectionEnd = start + 1;
+            autoResizeTextarea(taskInput);
+        }
+        // Enter键提交表单
+        else if (e.key === 'Enter') {
+            e.preventDefault();
+            const form = taskInput.closest('form');
+            form.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    // 为移动端输入框添加自动调整高度的功能和键盘事件处理
+    mobileTaskInput.addEventListener('input', () => {
+        autoResizeTextarea(mobileTaskInput);
+    });
+    mobileTaskInput.addEventListener('keydown', (e) => {
+        // Enter键插入换行
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const start = mobileTaskInput.selectionStart;
+            const end = mobileTaskInput.selectionEnd;
+            const value = mobileTaskInput.value;
+            mobileTaskInput.value = value.substring(0, start) + '\n' + value.substring(end);
+            mobileTaskInput.selectionStart = mobileTaskInput.selectionEnd = start + 1;
+            autoResizeTextarea(mobileTaskInput);
+        }
     });
 
     // 处理输入框失焦
