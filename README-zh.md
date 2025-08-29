@@ -20,7 +20,7 @@ TaskGo 是一个使用 Go 语言和 Gin 框架构建的现代化、轻量级的�
   - 在移动端，标签栏会自动收起，通过"Tags"按钮唤出。
   - 支持添加到主屏幕，提供离线访问能力。
 - **标签选择优化:** 输入`#`后直接显示匹配标签列表，无需额外提示文本。
-- **移动端输入优化:** 在移动浏览器中，Enter键默认用于换行，提供更自然的输入体验。
+- **移动端输入优化:** 在移动浏览器中，Enter 键默认用于换行，提供更自然的输入体验。
 
 ## 🛠️ 技术栈
 
@@ -41,7 +41,7 @@ TaskGo 是一个使用 Go 语言和 Gin 框架构建的现代化、轻量级的�
 
 在开始之前，请确保您的本地环境已经安装了以下工具：
 
-- [Go](https://golang.org/dl/) (版本 1.24或更高)
+- [Go](https://golang.org/dl/) (版本 1.24 或更高)
 - [Docker](https://www.docker.com/get-started) 和 [Docker Compose](https://docs.docker.com/compose/install/)
 
 ---
@@ -82,13 +82,28 @@ TaskGo 是一个使用 Go 语言和 Gin 框架构建的现代化、轻量级的�
 这是最简单的启动方式，可以避免本地环境差异带来的问题。
 
 1.  **构建并启动容器**
-    在项目根目录下，运行以下命令：
+    新建`docker-compose.yml`文件，运行以下命令：
+
+    ```bash
+    services:
+    taskgo:
+      image: tabortoa/taskgo
+      container_name: taskgo
+      restart: always
+      ports:
+        - "21280:8080"
+      environment:
+        - DATABASE_PATH=/app/db/taskgo.db
+      volumes:
+        - ./taskgo_data/db:/app/db
+        - ./taskgo_data/avatars:/app/web/static/avatars
+    ```
+
+    启动容器：
 
     ```bash
     docker-compose up --build
     ```
-
-    Docker 将会自动构建镜像并启动服务。本地的 `taskgo.db` 文件（如果存在）和 `static` 文件夹都会被打包进镜像中。
 
 2.  **访问应用**
     在浏览器中打开 `http://localhost:8080`。

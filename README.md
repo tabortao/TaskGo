@@ -83,7 +83,24 @@ Before starting, please ensure your local environment has the following tools in
 This is the simplest way to start, avoiding issues caused by local environment differences.
 
 1.  **Build and Start Container**
-    In the project root directory, run the following command:
+    Create a `docker-compose.yml` file in the project root directory, then run the following command:
+
+    ```bash
+    services:
+    taskgo:
+      image: tabortoa/taskgo
+      container_name: taskgo
+      restart: always
+      ports:
+        - "21280:8080"
+      environment:
+        - DATABASE_PATH=/app/db/taskgo.db
+      volumes:
+        - ./taskgo_data/db:/app/db
+        - ./taskgo_data/avatars:/app/web/static/avatars
+    ```
+
+    Start the container:
 
     ```bash
     docker-compose up --build
@@ -129,3 +146,4 @@ This is the simplest way to start, avoiding issues caused by local environment d
 |-- Dockerfile                 # Used to build production Docker image
 |-- docker-compose.yml         # Docker Compose configuration for local development
 `-- README.md                  # This document
+```
