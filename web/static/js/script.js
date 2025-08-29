@@ -2031,17 +2031,27 @@ function setupTagAutocomplete(inputId, containerId) {
     
     if (!input || !container) return;
     
+    // 监听输入事件
     input.addEventListener('input', (e) => {
         handleTagAutocomplete(e, container);
     });
     
+    // 监听键盘事件
     input.addEventListener('keydown', (e) => {
-        if (tagAutocompleteVisible && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Tab')) {
+        // 如果是#键，立即显示所有标签
+        if (e.key === '#') {
+            // 延迟执行，确保#字符已经输入到文本框中
+            setTimeout(() => {
+                handleTagAutocomplete({target: input}, container);
+            }, 10);
+        }
+        // 处理导航键
+        else if (tagAutocompleteVisible && (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === 'Tab')) {
             handleAutocompleteNavigation(e, container);
         }
     });
     
-    // Close autocomplete when clicking outside
+    // 点击外部区域关闭自动完成
     document.addEventListener('click', (e) => {
         if (!input.contains(e.target) && !container.contains(e.target)) {
             hideTagAutocomplete(container);
@@ -2061,6 +2071,14 @@ function handleTagAutocomplete(event, container) {
     if (hashMatch) {
         const searchTerm = hashMatch[1].toLowerCase();
         const availableTags = getAvailableTags();
+        
+        // 如果是刚输入#，显示所有标签
+        if (searchTerm === '') {
+            showTagAutocomplete(container, availableTags, input, hashMatch.index + 1);
+            return;
+        }
+        
+        // 否则进行模糊搜索匹配
         const filteredTags = availableTags.filter(tag => 
             tag.toLowerCase().includes(searchTerm)
         );
@@ -2097,39 +2115,48 @@ function showTagAutocomplete(container, tags, input, hashPosition) {
     currentAutocompleteInput = input;
     
     const tagsWrapper = document.createElement('div');
-    tagsWrapper.className = 'p-3';
+    tagsWrapper.className = 'tag-autocomplete-wrapper';
     
     const title = document.createElement('div');
-    title.className = 'text-xs text-secondary mb-2 font-medium';
-    title.textContent = 'Select a tag:';
+    title.className = 'tag-autocomplete-title';
+    title.textContent = '选择标签:';
     tagsWrapper.appendChild(title);
     
     const tagsContainer = document.createElement('div');
-    tagsContainer.className = 'flex flex-wrap gap-2 max-h-32 overflow-y-auto';
+    tagsContainer.className = 'tag-autocomplete-items';
     
-    tags.forEach((tag, index) => {
-        const tagEl = document.createElement('button');
-        tagEl.type = 'button';
-        tagEl.className = 'tag-autocomplete-item px-3 py-1.5 text-sm rounded-md border border-border hover:bg-background focus:bg-background focus:outline-none transition-colors';
-        tagEl.style.backgroundColor = `${getTagColor(tag)}20`;
-        tagEl.style.color = getTagColor(tag);
-        tagEl.textContent = tag;
-        tagEl.dataset.index = index;
-        
-        tagEl.addEventListener('click', () => {
-            selectTag(tag, input, hashPosition);
+    // 如果没有标签，显示提示信息
+    if (tags.length === 0) {
+        const noTagsMsg = document.createElement('div');
+        noTagsMsg.className = 'text-sm text-secondary';
+        noTagsMsg.textContent = '没有匹配的标签';
+        tagsContainer.appendChild(noTagsMsg);
+    } else {
+        // 添加所有标签
+        tags.forEach((tag, index) => {
+            const tagEl = document.createElement('button');
+            tagEl.type = 'button';
+            tagEl.className = 'tag-autocomplete-item';
+            tagEl.style.backgroundColor = `${getTagColor(tag)}20`;
+            tagEl.style.color = getTagColor(tag);
+            tagEl.textContent = tag;
+            tagEl.dataset.index = index;
+            
+            tagEl.addEventListener('click', () => {
+                selectTag(tag, input, hashPosition);
+            });
+            
+            tagsContainer.appendChild(tagEl);
         });
-        
-        tagsContainer.appendChild(tagEl);
-    });
+    }
     
     tagsWrapper.appendChild(tagsContainer);
     container.appendChild(tagsWrapper);
     
-    // Focus first item
+    // 聚焦第一个项目
     const firstItem = container.querySelector('.tag-autocomplete-item');
     if (firstItem) {
-        firstItem.classList.add('bg-background');
+        firstItem.classList.add('active');
     }
 }
 
@@ -2143,7 +2170,7 @@ function handleAutocompleteNavigation(event, container) {
     event.preventDefault();
     
     const items = container.querySelectorAll('.tag-autocomplete-item');
-    const currentIndex = Array.from(items).findIndex(item => item.classList.contains('bg-background'));
+    const currentIndex = Array.from(items).findIndex(item => item.classList.contains('active'));
     
     if (event.key === 'ArrowDown') {
         const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
@@ -2161,9 +2188,9 @@ function handleAutocompleteNavigation(event, container) {
 function updateAutocompleteSelection(items, newIndex) {
     items.forEach((item, index) => {
         if (index === newIndex) {
-            item.classList.add('bg-background');
+            item.classList.add('active');
         } else {
-            item.classList.remove('bg-background');
+            item.classList.remove('active');
         }
     });
 }
