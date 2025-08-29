@@ -1,128 +1,131 @@
-# TaskGo 任务管理系统
+# TaskGo Task Management System
 
-TaskGo 是一个使用 Go 语言和 Gin 框架构建的现代化、轻量级的任务管理系统。它采用 SQLite 数据库，无需复杂配置，并提供了一个简洁、用户友好的响应式 Web 界面。项目支持 PWA 特性，可以方便地“安装”到桌面或手机主屏幕，像原生应用一样使用。
+[中文](./README-zh.md) | [English](./README.md)
 
-![](./assets/img/UI.png)
+TaskGo is a modern, lightweight task management system built with Go language and Gin framework. It uses SQLite database, requires no complex configuration, and provides a clean, user-friendly responsive web interface. The project supports PWA features, allowing it to be easily "installed" to the desktop or mobile home screen, used like a native application.
 
-## ✨ 主要功能
+![](./assets/img/UI-en.png)
 
-- **用户认证:** 支持用户注册和登录，确保任务数据私密性。
-- **任务管理:** 提供完整的 CRUD (创建、读取、更新、删除) 功能。
-- **智能标签:** 在输入框中通过 `#标签` 格式（例如：`#工作 #紧急 完成项目报告`）为任务添加一个或多个标签。
-- **标签筛选:** 左侧边栏会自动汇总所有标签，点击即可快速筛选相关任务。
-- **状态切换:** 通过复选框轻松切换任务的“待办”与“已完成”状态。
-- **动态搜索:** 右上角提供实时搜索功能，可根据关键词快速过滤所有任务。
-- **折叠侧边栏:** 左侧标签栏可以折叠和展开，在宽屏上提供更大的内容区域，并自动记忆状态。
-- **分页加载:** “已完成”列表默认只显示最新的 10 条记录，点击“显示更多”可加载旧记录，提升性能。
-- **响应式与 PWA:**
-  - 界面自适应桌面、平板和手机等不同尺寸的屏幕。
-  - 在移动端，标签栏会自动收起，通过“Tags”按钮唤出。
-  - 支持添加到主屏幕，提供离线访问能力。
+## ✨ Main Features
 
-## 🛠️ 技术栈
+- **User Authentication:** Supports user registration and login to ensure task data privacy.
+- **Task Management:** Provides complete CRUD (Create, Read, Update, Delete) functionality.
+- **Smart Tags:** Add one or more tags to tasks by using the `#tag` format in the input box (e.g., `#work #urgent Complete project report`).
+- **Tag Filtering:** The left sidebar automatically aggregates all tags, allowing quick filtering of related tasks by clicking.
+- **Status Toggle:** Easily switch between "To-Do" and "Completed" task statuses via checkboxes.
+- **Dynamic Search:** The top right corner provides real-time search functionality to quickly filter all tasks by keywords.
+- **Collapsible Sidebar:** The left tag sidebar can be collapsed and expanded by clicking the top area, providing a larger content area on wide screens and automatically remembering its state.
+- **Paginated Loading:** The "Completed" list defaults to showing only the latest 10 records; click "Show More" to load older records, improving performance.
+- **Responsive & PWA:**
+  - The interface adapts to different screen sizes such as desktops, tablets, and mobile phones.
+  - On mobile devices, the tag sidebar automatically collapses and can be invoked via the "Tags" button.
+  - Supports adding to the home screen, providing offline access.
+- **Optimized Tag Selection:** After typing `#`, a list of matching tags is directly displayed, without additional prompt text.
+- **Mobile Input Optimization:** In mobile browsers, the Enter key defaults to line breaks, providing a more natural input experience.
 
-- **后端:**
-  - **Go 1.21+**
-  - **Gin:** 高性能的 Go Web 框架。
-  - **GORM:** Go ORM 库，用于操作数据库。
-  - **golang-jwt:** 用于生成和验证 JWT (JSON Web Tokens)。
-- **前端:**
+## 🛠️ Technology Stack
+
+- **Backend:**
+  - **Go 1.24+**
+  - **Gin:** High-performance Go web framework.
+  - **GORM:** Go ORM library for database operations.
+  - **golang-jwt:** Used for generating and verifying JWT (JSON Web Tokens).
+- **Frontend:**
   - **HTML5 / CSS3**
-  - **Vanilla JavaScript (ES6+):** 无前端框架，轻量且高效。
-- **数据库:**
-  - **SQLite:** 一个轻量级的、无服务器的嵌入式数据库。
-- **容器化:**
-  - **Docker & Docker Compose:** 用于快速构建、打包和部署应用。
+  - **Vanilla JavaScript (ES6+):** No frontend framework, lightweight and efficient.
+- **Database:**
+  - **SQLite:** A lightweight, serverless, embedded database.
+- **Containerization:**
+  - **Docker & Docker Compose:** Used for rapid building, packaging, and deployment of applications.
 
-## 🚀 本地运行
+## 🚀 Local Run
 
-在开始之前，请确保您的本地环境已经安装了以下工具：
+Before starting, please ensure your local environment has the following tools installed:
 
-- [Go](https://golang.org/dl/) (版本 1.24 或更高)
-- [Docker](https://www.docker.com/get-started) 和 [Docker Compose](https://docs.docker.com/compose/install/)
+- [Go](https://golang.org/dl/) (version 1.24.1 or higher)
+- [Docker](https://www.docker.com/get-started) and [Docker Compose](https://docs.docker.com/compose/install/)
 
 ---
 
-### 方法一：直接在本地运行
+### Method One: Run Directly Locally
 
-1.  **克隆项目 (如果您在本地)**
+1.  **Clone the project (if you are local)**
 
     ```bash
-    git clone <your-repo-url>
+    git clone https://github.com/tabortao/TaskGo.git
     cd TaskGo
     ```
 
-2.  **安装依赖**
-    打开终端，运行以下命令以下载 Go 模块：
+2.  **Install Dependencies**
+    Open a terminal and run the following command to download Go modules:
 
     ```bash
     go mod tidy
     ```
 
-3.  **运行应用**
+3.  **Run the Application**
 
     ```bash
-    go build -o taskgo.exe ./cmd/main.go # 构建项目
-    .\taskgo.exe # 启动项目
-    go run ./cmd/main.go # 直接启动项目
+    go build -o taskgo.exe ./cmd/main.go # Build project
+    .\taskgo.exe # Start project
+    go run ./cmd/main.go # Directly start project
     ```
 
-    应用启动后，`taskgo.db` 数据库文件将在项目根目录自动创建。
+    After the application starts, the `taskgo.db` database file will be automatically created in the project root directory.
 
-4.  **访问应用**
-    在浏览器中打开 `http://localhost:8080`。
+4.  **Access the Application**
+    Open `http://localhost:8080` in your browser.
 
 ---
 
-### 方法二：使用 Docker 运行 (推荐)
+### Method Two: Run with Docker (Recommended)
 
-这是最简单的启动方式，可以避免本地环境差异带来的问题。
+This is the simplest way to start, avoiding issues caused by local environment differences.
 
-1.  **构建并启动容器**
-    在项目根目录下，运行以下命令：
+1.  **Build and Start Container**
+    In the project root directory, run the following command:
 
     ```bash
     docker-compose up --build
     ```
 
-    Docker 将会自动构建镜像并启动服务。本地的 `taskgo.db` 文件（如果存在）和 `static` 文件夹都会被打包进镜像中。
+    Docker will automatically build the image and start the service. The local `taskgo.db` file (if it exists) and `static` folder will be packaged into the image.
 
-2.  **访问应用**
-    在浏览器中打开 `http://localhost:8080`。
+2.  **Access the Application**
+    Open `http://localhost:8080` in your browser.
 
-## 📖 如何使用
+## 📖 How to Use
 
-1.  **注册/登录:** 首次使用请先注册一个账户，然后登录。
-2.  **创建任务:** 在顶部的输入框中输入任务内容。您可以随时加入 `#标签名` 来为任务分类。
-3.  **管理任务:**
-    - 点击任务前的复选框来完成任务。
-    - 点击任务文字本身可以进行编辑。
-    - 点击任务最右侧的删除按钮可以删除它。
-4.  **筛选和搜索:**
-    - 点击左侧边栏的标签可以只显示该标签下的任务。
-    - 使用右上角的搜索框可以按关键词搜索所有任务。
+1.  **Register/Login:** First-time users should register an account, then log in.
+2.  **Create Task:** Enter task content in the input box at the top. You can add tags to tasks at any time by including `#tagname`.
+3.  **Manage Tasks:**
+    - Click the checkbox before a task to complete it.
+    - Click the task text itself to edit it.
+    - Click the delete button on the far right of the task to delete it.
+4.  **Filter and Search:**
+    - Click a tag in the left sidebar to display only tasks under that tag.
+    - Use the search box in the top right corner to search all tasks by keywords.
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```bash
 /TaskGo
-|-- cmd/main.go                # 程序主入口
-|-- docs/                      # 项目文档
-|-- internal/                  # 项目内部代码，不对外暴露
-|   |-- auth/                  # JWT 认证逻辑
-|   |-- database/              # 数据库连接与初始化
-|   |-- handlers/              # HTTP 请求处理器 (API 逻辑)
-|   |-- middleware/            # Gin 中间件
-|   |-- models/                # 数据模型 (structs)
-|   `-- router/                # Gin 路由配置
-|-- web/                       # 所有前端文件
-|   |-- static/                # CSS, JavaScript, 图标等静态资源
-|   |-- templates/             # HTML 模板
-|   |-- manifest.json          # PWA 清单文件
+|-- cmd/main.go                # Program entry point
+|-- docs/                      # Project documentation
+|-- internal/                  # Project internal code, not exposed externally
+|   |-- auth/                  # JWT authentication logic
+|   |-- database/              # Database connection and initialization
+|   |-- handlers/              # HTTP request handlers (API logic)
+|   |-- middleware/            # Gin middleware
+|   |-- models/                # Data models (structs)
+|   `-- router/                # Gin router configuration
+|-- web/                       # All frontend files
+|   |-- static/                # CSS, JavaScript, icons, etc. static resources
+|   |-- templates/             # HTML templates
+|   |-- manifest.json          # PWA manifest file
 |   `-- service-worker.js      # PWA Service Worker
-|-- go.mod                     # Go 模块依赖
+|-- go.mod                     # Go module dependencies
 |-- go.sum
-|-- Dockerfile                 # 用于构建生产环境的 Docker 镜像
-|-- docker-compose.yml         # 用于本地开发的 Docker Compose 配置
-`-- README.md                  # 本文档
-```
+|-- Dockerfile                 # Used to build production Docker image
+|-- docker-compose.yml         # Docker Compose configuration for local development
+`-- README.md                  # This document

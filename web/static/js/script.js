@@ -931,9 +931,9 @@ function renderTasks() {
         const emptyState = document.createElement('div');
         emptyState.className = 'flex items-center justify-center h-[10rem] text-secondary';
         if (currentView === 'favorites') {
-            emptyState.innerHTML = '还没有收藏的未完成任务';
+            emptyState.innerHTML = 'Unfinished business that has not been bookmarked yet';
         } else {
-            emptyState.innerHTML = '还没有任务';
+            emptyState.innerHTML = 'There is no mission yet.';
         }
         todoList.appendChild(emptyState);
     }
@@ -942,9 +942,9 @@ function renderTasks() {
         const emptyState = document.createElement('div');
         emptyState.className = 'flex items-center justify-center h-[10rem] text-secondary';
         if (currentView === 'favorites') {
-            emptyState.innerHTML = '还没有收藏的已完成任务';
+            emptyState.innerHTML = 'No favorites have been completed yet';
         } else {
-            emptyState.innerHTML = '还没有完成的任务';
+            emptyState.innerHTML = 'No completed tasks yet';
         }
         completedList.appendChild(emptyState);
     }

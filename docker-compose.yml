@@ -1,6 +1,7 @@
 services:
   taskgo:
     image: tabortoa/taskgo #国内用户镜像加速 dk.nastool.de/tabortoa/taskgo
+    container_name: taskgo
     restart: always
     ports:
       - "21280:8080"
