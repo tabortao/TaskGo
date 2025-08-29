@@ -161,10 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTasks();
     });
 
-    // Show more button listener
-    document.getElementById('show-more-btn').addEventListener('click', () => {
-        completedTasksToShow += 10;
-        renderTasks();
+    // 滚动到底部自动加载更多任务
+    window.addEventListener('scroll', () => {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) { // 距离底部100px时触发
+            loadMoreCompletedTasks();
+        }
     });
 
     // Sidebar toggle listener
@@ -846,6 +847,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+function loadMoreCompletedTasks() {
+    completedTasksToShow += 10;
+    renderTasks();
+}
+
 function renderTasks() {
     const todoList = document.getElementById('todo-list');
     const completedList = document.getElementById('completed-list');
@@ -913,12 +919,8 @@ function renderTasks() {
             completedList.appendChild(taskEl);
         });
         
-        // Show or hide the "Show More" button
-        if (completedTasks.length > completedTasksToShow) {
-            showMoreBtn.style.display = 'block';
-        } else {
-            showMoreBtn.style.display = 'none';
-        }
+        // 不再显示"Show More"按钮
+    showMoreBtn.style.display = 'none';
     }
 
     // 如果没有任务，添加空状态提示
