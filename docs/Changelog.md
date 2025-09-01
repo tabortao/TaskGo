@@ -2,12 +2,51 @@
 
 ## v0.2.4
 
-点击已选中的标签取消筛选，显示所有任务。✅ 
-在移动端点击侧边栏的设置按钮，设置窗口会显示在最前方。
-新增评论后关闭窗口，任务页面会自动刷新，显示新增的评论。
-合并待办和已完成任务列表并移除折叠功能。✅
-登录页面记住用户名和密码布局 ✅
-优化输入框发送按钮样式。✅
+**Release time:** 2025-9-1
+
+✨ **New Features**
+
+- Click on a selected tag to cancel filtering and show all tasks
+- Added remember username/password functionality on login page
+- Added pull-to-refresh feature
+
+🔄 **Changes**
+
+- Merged todo and completed task lists and removed fold functionality
+- Login page remember username/password layout
+
+🎨 **UI Improvements**
+
+- When clicking settings button on mobile sidebar, settings window appears in front
+- Optimized send button style in input box
+
+⚡ **Behavior Changes**
+
+- Task page auto-refreshes to show new comments after adding comment and closing window
+
+---
+
+**Release time:** 2025-9-1
+
+✨ **新增功能**
+
+- 点击已选中的标签取消筛选，显示所有任务
+- 登录页面添加记住用户名密码功能
+- 添加下拉刷新功能
+
+🔄 **功能变更**
+
+- 合并待办和已完成任务列表并移除折叠功能
+- 调整登录页面记住用户名密码布局
+
+🎨 **界面优化**
+
+- 移动端点击侧边栏设置按钮时，设置窗口显示在最前方
+- 优化输入框发送按钮样式
+
+⚡ **行为改动**
+
+- 新增评论后关闭窗口时，任务页面会自动刷新显示新增评论
 
 ## v0.2.3
 
