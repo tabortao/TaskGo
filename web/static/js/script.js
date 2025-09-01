@@ -667,12 +667,22 @@ function renderTags() {
         }
         
         li.addEventListener('click', () => {
-            currentTagFilter = tag;
+            // 检查是否点击了已选中的标签，如果是则取消筛选
+            if (currentTagFilter === tag) {
+                currentTagFilter = null; // 取消筛选
+                // 移除所有标签的蓝色背景
+                document.querySelectorAll('#tag-list li').forEach(tagElement => {
+                    tagElement.classList.remove('bg-primary');
+                    tagElement.classList.remove('text-white');
+                });
+            } else {
+                currentTagFilter = tag; // 设置新的筛选标签
+            }
+            
             // 当点击标签时，将 currentView 设置为 'all'，确保只显示该标签下的所有任务
             currentView = 'all'; 
             updateFavoritesNavState(); // 更新导航状态以反映 currentView 的变化
-            renderTags();
-            renderTasks();
+            loadTasks(); // 使用loadTasks替代renderTags和renderTasks，确保数据刷新
         });
         
         // 添加右键菜单功能
@@ -724,15 +734,26 @@ function handleTagClick(event, tagText, taskId) {
     
     // 点击标签时切换到该标签的任务列表
     const cleanTagText = tagText.startsWith('#') ? tagText.substring(1) : tagText;
-    currentTagFilter = cleanTagText;
+    
+    // 检查是否点击了已选中的标签，如果是则取消筛选
+    if (currentTagFilter === cleanTagText) {
+        currentTagFilter = null; // 取消筛选
+        // 移除所有标签的蓝色背景
+        document.querySelectorAll('#tag-list li').forEach(tagElement => {
+            tagElement.classList.remove('bg-primary');
+            tagElement.classList.remove('text-white');
+        });
+    } else {
+        currentTagFilter = cleanTagText; // 设置新的筛选标签
+    }
+    
     currentView = 'all'; // 切换回全部任务视图
     
     // 更新导航状态
     updateFavoritesNavState();
     
-    // 重新渲染任务和标签
-    renderTags();
-    renderTasks();
+    // 重新加载任务以刷新主内容区
+    loadTasks();
 }
 
 // 关闭标签菜单
