@@ -317,39 +317,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = '';
     });
 
-    // --- Collapsible Task Sections Logic ---
-    const todoSection = document.getElementById('todo-section');
-    const completedSection = document.getElementById('completed-section');
-
-    // Set initial states based on localStorage or defaults
-    if (localStorage.getItem('todo-collapsed') === 'true') {
-        todoSection.classList.add('collapsed');
-        todoSection.querySelector('.task-section-header svg').style.transform = 'rotate(-90deg)';
-    } else {
-        todoSection.classList.remove('collapsed');
-    }
-
-    // 默认展开已完成任务列表
-    completedSection.classList.remove('collapsed');
-    completedSection.querySelector('.task-section-header svg').style.transform = '';
-    localStorage.setItem('completed-collapsed', 'false');
-
-    todoSection.querySelector('.task-section-header').addEventListener('click', () => {
-        const isCollapsed = todoSection.classList.toggle('collapsed');
-        localStorage.setItem('todo-collapsed', isCollapsed);
-        todoSection.querySelector('.task-section-header svg').style.transform = isCollapsed ? 'rotate(-90deg)' : '';
-    });
-
-    completedSection.querySelector('.task-section-header').addEventListener('click', () => {
-        const isCollapsed = completedSection.classList.toggle('collapsed');
-        localStorage.setItem('completed-collapsed', isCollapsed);
-        completedSection.querySelector('.task-section-header svg').style.transform = isCollapsed ? 'rotate(-90deg)' : '';
-    });
-    // --- End Collapsible Task Sections Logic ---
+    // --- 任务列表逻辑 ---
+    // 注意：任务列表已合并为一个section，不再需要折叠功能
+    // 清除localStorage中的折叠状态，因为不再需要
+    localStorage.removeItem('todo-collapsed');
+    localStorage.removeItem('completed-collapsed');
+    // --- End Task Sections Logic ---
 
     // Handle window resize
     window.addEventListener('resize', () => {
         const mainContent = document.querySelector('.sidebar-adjusted');
+        const sidebar = document.getElementById('sidebar');
+        
+        if (!sidebar || !mainContent) return; // 确保元素存在
+        
         const isCollapsed = sidebar.classList.contains('collapsed');
         
         if (window.innerWidth >= 1024) { // 桌面端
@@ -372,7 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- End Collapsible Task Sections Logic ---
+    // --- End Task Sections Logic ---
 
     // --- Tag Autocomplete Logic ---
     const taskInput = document.getElementById('task-input');
@@ -641,7 +622,7 @@ function renderTags() {
         
         // 添加标签图标
         const tagIcon = document.createElement('svg');
-        tagIcon.className = 'tag-icon w-4 h-4';
+        tagIcon.className = 'tag-icon w-5 h-5'; // 修改为与All Tasks一致的大小
         tagIcon.setAttribute('fill', 'none');
         tagIcon.setAttribute('stroke', 'currentColor');
         tagIcon.setAttribute('viewBox', '0 0 24 24');
@@ -650,7 +631,7 @@ function renderTags() {
         
         // 添加标签文本
         const tagText = document.createElement('span');
-        tagText.className = 'tag-text';
+        tagText.className = 'tag-text text-sm font-medium'; // 添加与All Tasks一致的文字样式
         tagText.textContent = tag;
         
         content.appendChild(tagIcon);
@@ -910,13 +891,9 @@ function renderTasks() {
     const todoList = document.getElementById('todo-list');
     const completedList = document.getElementById('completed-list');
     const showMoreBtn = document.getElementById('show-more-btn');
-    const todoSection = document.getElementById('todo-section');
-    const completedSection = document.getElementById('completed-section');
-
-    // 确保即使没有任务时也保持最小高度
-    todoSection.style.minHeight = '20rem';
-    completedSection.style.minHeight = '20rem';
-
+    
+    if (!todoList || !completedList) return; // 确保元素存在
+    
     todoList.innerHTML = '';
     completedList.innerHTML = '';
 
