@@ -1,6 +1,13 @@
 /* TailwindCSS 已集成，移除冗余样式 */
 
 /* 自定义样式 */
+
+/* 下拉刷新相关样式 */
+.transition-transform {
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+}
 :root {
     --task-border: rgba(226, 232, 240, 0.8);
     --task-border-hover: rgba(37, 99, 235, 0.2);

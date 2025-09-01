@@ -25,6 +25,86 @@ function getTagColor(tag) {
 }
 // --- End Tag Color Generation ---
 
+// 移动端下拉刷新功能
+function setupPullToRefresh() {
+    const mainContent = document.querySelector('main');
+    let touchStartY = 0;
+    let touchEndY = 0;
+    let isRefreshing = false;
+    const minPullDistance = 100; // 最小下拉距离
+    
+    // 创建刷新指示器
+    const refreshIndicator = document.createElement('div');
+    refreshIndicator.className = 'fixed top-0 left-0 right-0 flex items-center justify-center bg-primary text-white py-2 z-50 transform -translate-y-full transition-transform';
+    refreshIndicator.innerHTML = 'Pull down to refresh...';
+    document.body.appendChild(refreshIndicator);
+    
+    // 触摸开始事件
+    mainContent.addEventListener('touchstart', (e) => {
+        // 只有当滚动到顶部时才启用下拉刷新
+        if (mainContent.scrollTop <= 0) {
+            touchStartY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+    
+    // 触摸移动事件
+    mainContent.addEventListener('touchmove', (e) => {
+        if (touchStartY > 0 && !isRefreshing) {
+            touchEndY = e.touches[0].clientY;
+            const distance = touchEndY - touchStartY;
+            
+            // 只有下拉时才显示指示器
+            if (distance > 0 && mainContent.scrollTop <= 0) {
+                // 计算下拉距离的百分比，最大为100%
+                const pullPercentage = Math.min(distance / minPullDistance, 1);
+                const translateY = pullPercentage * 100 - 100; // -100% 到 0%
+                
+                refreshIndicator.style.transform = `translateY(${translateY}%)`;
+                
+                // 更新提示文本
+                if (distance >= minPullDistance) {
+                    refreshIndicator.innerHTML = 'Release to refresh';
+                } else {
+                    refreshIndicator.innerHTML = 'Pull down to refresh...';
+                }
+                
+                // 防止页面滚动
+                if (distance > 10) {
+                    e.preventDefault();
+                }
+            }
+        }
+    }, { passive: false });
+    
+    // 触摸结束事件
+    mainContent.addEventListener('touchend', () => {
+        if (touchStartY > 0 && touchEndY > 0 && !isRefreshing) {
+            const distance = touchEndY - touchStartY;
+            
+            // 如果下拉距离足够，则刷新页面
+            if (distance >= minPullDistance) {
+                isRefreshing = true;
+                refreshIndicator.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Refreshing...';
+                refreshIndicator.style.transform = 'translateY(0)';
+                
+                // 刷新数据
+                setTimeout(() => {
+                    loadTasks().then(() => {
+                        // 重置状态
+                        isRefreshing = false;
+                        touchStartY = 0;
+                        touchEndY = 0;
+                        refreshIndicator.style.transform = 'translateY(-100%)';
+                    });
+                }, 1000);
+            } else {
+                // 如果下拉距离不够，恢复指示器位置
+                refreshIndicator.style.transform = 'translateY(-100%)';
+            }
+        }
+    }, { passive: true });
+}
+
 // Global state to hold all tasks and the current filter
 let allTasks = [];
 let currentTagFilter = null;
@@ -74,6 +154,25 @@ if (window.matchMedia) {
 document.addEventListener('DOMContentLoaded', () => {
     // 应用保存的主题设置
     applyTheme(currentTheme);
+    
+    // 检查是否有保存的用户名
+    const savedUsername = localStorage.getItem('saved_username');
+    if (savedUsername) {
+        document.getElementById('login-username').value = savedUsername;
+        document.getElementById('remember-username').checked = true;
+        
+        // 只有在有保存的用户名时才检查是否有保存的密码
+        const savedPassword = localStorage.getItem('saved_password');
+        if (savedPassword) {
+            document.getElementById('login-password').value = atob(savedPassword); // 解码密码
+            document.getElementById('remember-password').checked = true;
+        }
+    }
+    
+    // 移动端下拉刷新功能
+    if ('ontouchstart' in window) {
+        setupPullToRefresh();
+    }
     
     const token = localStorage.getItem('token');
     if (token) {
@@ -490,10 +589,29 @@ async function handleRegister(e) {
     }
 }
 
+// 记住用户名和密码的逻辑已移至主DOMContentLoaded事件监听器中
+
 async function handleLogin(e) {
     e.preventDefault();
     const username = document.getElementById('login-username').value;
     const password = document.getElementById('login-password').value;
+    const rememberUsername = document.getElementById('remember-username').checked;
+    const rememberPassword = document.getElementById('remember-password').checked;
+
+    // 保存用户名（如果选择了记住用户名）
+    if (rememberUsername) {
+        localStorage.setItem('saved_username', username);
+    } else {
+        localStorage.removeItem('saved_username');
+    }
+    
+    // 只有在选择了记住密码时才保存密码
+    // 注意：即使选择了记住密码，也必须选择记住用户名才能记住密码
+    if (rememberPassword && rememberUsername) {
+        localStorage.setItem('saved_password', btoa(password)); // 使用base64编码存储密码
+    } else {
+        localStorage.removeItem('saved_password');
+    }
 
     const res = await fetch('/api/login', {
         method: 'POST',
@@ -1824,6 +1942,8 @@ function showCommentModal(taskId) {
     // 添加事件监听器
     document.getElementById('close-comment-modal').addEventListener('click', () => {
         modal.remove();
+        // 关闭窗口后刷新任务页面
+        loadTasks();
     });
 
     document.getElementById('comment-form').addEventListener('submit', (e) => {
@@ -1839,6 +1959,8 @@ function showCommentModal(taskId) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
+            // 关闭窗口后刷新任务页面
+            loadTasks();
         }
     });
 }
