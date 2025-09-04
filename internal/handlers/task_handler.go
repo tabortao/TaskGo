@@ -93,8 +93,13 @@ func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
 	content := c.PostForm("content")
 	tags := c.PostForm("tags")
 
-	if content == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "任务内容不能为空"})
+	// 检查是否有图片上传
+	form, err := c.MultipartForm()
+	hasImages := err == nil && form.File["images"] != nil && len(form.File["images"]) > 0
+
+	// 如果既没有内容也没有图片，则返回错误
+	if content == "" && !hasImages {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "任务内容或图片至少需要提供一项"})
 		return
 	}
 
@@ -106,8 +111,7 @@ func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
 
 	// 处理图片上传
 	var imagePaths []string
-	form, err := c.MultipartForm()
-	if err == nil && form.File["images"] != nil {
+	if hasImages {
 		// 确保图片目录存在
 		imageDir := "web/static/images/tasks"
 		if err := os.MkdirAll(imageDir, 0755); err != nil {
@@ -117,9 +121,10 @@ func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
 
 		// 处理每个上传的图片
 		for _, fileHeader := range form.File["images"] {
-			// 生成唯一文件名
-			timestamp := time.Now().Unix()
-			filename := fmt.Sprintf("%d_%s", timestamp, fileHeader.Filename)
+			// 生成基于时间戳的唯一文件名
+			timestamp := time.Now().UnixNano() // 使用纳秒级时间戳确保唯一性
+			ext := filepath.Ext(fileHeader.Filename) // 获取原文件扩展名
+			filename := fmt.Sprintf("%d%s", timestamp, ext) // 纯时间戳文件名
 			filePath := filepath.Join(imageDir, filename)
 
 			// 打开上传的文件
