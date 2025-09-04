@@ -1154,7 +1154,7 @@ function updateFavoritesNavState() {
 function createTaskElement(task) {
     const taskEl = document.createElement('li');
     taskEl.dataset.id = task.ID;
-    let className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-2 border border-border/50 rounded-lg`;
+    let className = `task-item group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-0 border border-border/50 rounded-lg`;
     if (task.pinned) {
         className += ' pinned';
     }
@@ -1232,7 +1232,15 @@ function createTaskElement(task) {
     const contentText = document.createElement('span');
     contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
     contentText.textContent = task.content;
-    contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
+    contentText.addEventListener('dblclick', () => {
+        console.log('双击事件触发，任务ID:', task.ID);
+        try {
+            editTaskContent(contentText, task.ID);
+        } catch (error) {
+            console.error('editTaskContent 函数执行错误:', error);
+            alert('编辑功能出现错误: ' + error.message);
+        }
+    });
     content.appendChild(contentText);
 
     // 图片容器
@@ -1365,7 +1373,7 @@ function createTaskElement(task) {
 
 async function handleCreateTask(e) {
     e.preventDefault();
-    const isDesktop = e.target.id === 'task-form';
+    const isDesktop = (e.currentTarget && e.currentTarget.id === 'task-form');
     const input = document.getElementById(isDesktop ? 'task-input' : 'mobile-task-input');
     const inputValue = input.value.trim();
     
@@ -1426,6 +1434,13 @@ async function handleCreateTask(e) {
             if (previewContainer) {
                 previewContainer.innerHTML = '';
                 previewContainer.classList.add('hidden');
+            }
+            
+            // 清空累积的文件列表
+            if (isDesktop) {
+                accumulatedDesktopFiles = [];
+            } else {
+                accumulatedMobileFiles = [];
             }
         }
         
@@ -1571,18 +1586,38 @@ function editTaskContent(span, id) {
     if (!task) return;
     
     // 获取任务项容器
-    const taskItem = span.closest('.task-item');
-    const imagesContainer = taskItem.querySelector('.flex.flex-wrap.gap-2.mb-2');
+    const taskItem = span.closest('.task-item') || span.closest('li') || span.parentElement; // 容错处理，尽量拿到任务项容器
+    const imagesContainer = taskItem ? taskItem.querySelector('.flex.flex-wrap.gap-2.mb-2') : null; // 可能没有图片容器
     
-    // 创建编辑容器
+    // 临时调整任务项容器的样式，为编辑提供更多空间
+    const taskContent = span.closest('.flex-1.min-w-0');
+    const taskItemContainer = span.closest('.task-item') || span.closest('li');
+    if (taskContent) {
+        taskContent.style.minWidth = '0';
+        taskContent.style.maxWidth = 'none';
+        taskContent.style.width = '100%';
+        taskContent.style.flex = '1 1 auto';
+    }
+    // 同时调整整个任务项的宽度
+    if (taskItemContainer) {
+        taskItemContainer.style.maxWidth = 'none';
+        taskItemContainer.style.width = '100%';
+    }
+    
+    // 创建编辑容器 - 设置宽度为任务列表的80%
     const editContainer = document.createElement('div');
-    editContainer.className = 'w-full';
+    editContainer.className = 'max-w-none';
+    editContainer.style.width = '80%'; // 设置宽度为任务列表的80%
+    editContainer.style.minWidth = '300px'; // 设置最小宽度确保编辑区域足够宽
     
-    // 创建textarea替代input
+    // 创建textarea替代input - 设置为容器内100%宽度
     const textarea = document.createElement('textarea');
     textarea.value = currentContent;
-    textarea.className = 'w-full px-2 py-1 bg-background border border-border rounded resize-none overflow-hidden focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[24px] mb-2';
+    textarea.className = 'w-full px-3 py-2 bg-background border border-border rounded resize-none overflow-hidden focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px] mb-2';
     textarea.style.height = 'auto'; // 重置高度
+    textarea.style.minHeight = '100px'; // 增加最小高度到100px，提供更好的编辑体验
+    textarea.style.width = '100%'; // 在80%宽度的容器内占满宽度
+    textarea.style.minWidth = '280px'; // 设置最小宽度
     
     editContainer.appendChild(textarea);
     
@@ -1606,6 +1641,7 @@ function editTaskContent(span, id) {
             
             // 删除按钮
             const deleteBtn = document.createElement('button');
+            deleteBtn.type = 'button'; // 明确指定按钮类型，防止触发表单提交
             deleteBtn.className = 'absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors flex items-center justify-center';
             deleteBtn.innerHTML = '×';
             deleteBtn.onclick = (e) => {
@@ -1640,26 +1676,36 @@ function editTaskContent(span, id) {
     imageInput.className = 'hidden';
     imageInput.id = `edit-image-input-${id}`;
     
-    // 创建添加图片按钮
+    // 创建添加图片按钮（小图标）
     const addImageBtn = document.createElement('button');
     addImageBtn.type = 'button';
-    addImageBtn.className = 'inline-flex items-center px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border transition-colors';
+    addImageBtn.className = 'inline-flex items-center justify-center w-8 h-8 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors';
+    addImageBtn.title = '添加图片'; // 添加提示文字
     addImageBtn.innerHTML = `
-        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
         </svg>
-        添加图片
     `;
     
     // 点击按钮触发文件选择
     addImageBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        imageInput.click();
+        // 设置标志，防止blur事件触发保存
+        textarea.dataset.selectingImage = 'true';
+        // 确保文件输入元素可用并触发点击
+        setTimeout(() => {
+            imageInput.click();
+        }, 0);
     });
     
     // 处理文件选择
     imageInput.addEventListener('change', (e) => {
+        // 清除选择图片标志
+        textarea.dataset.selectingImage = 'false';
+        // 重新聚焦到textarea
+        setTimeout(() => textarea.focus(), 100);
+        
         const files = e.target.files;
         if (files && files.length > 0) {
             // 创建或获取图片容器
@@ -1690,6 +1736,7 @@ function editTaskContent(span, id) {
                         
                         // 删除按钮
                         const deleteBtn = document.createElement('button');
+                        deleteBtn.type = 'button'; // 明确指定按钮类型，防止触发表单提交
                         deleteBtn.className = 'absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors flex items-center justify-center';
                         deleteBtn.innerHTML = '×';
                         deleteBtn.onclick = (e) => {
@@ -1825,10 +1872,29 @@ function editTaskContent(span, id) {
                 }
             }
         }
+        
+        // 恢复任务项容器的原始样式
+        if (taskContent) {
+            taskContent.style.minWidth = '';
+            taskContent.style.maxWidth = '';
+            taskContent.style.width = '';
+            taskContent.style.flex = '';
+        }
+        if (taskItemContainer) {
+            taskItemContainer.style.maxWidth = '';
+            taskItemContainer.style.width = '';
+        }
+        
         loadTasks(); // Always reload to ensure data consistency
     };
 
-    textarea.addEventListener('blur', saveChanges);
+    textarea.addEventListener('blur', (e) => {
+        // 如果正在选择图片，不触发保存
+        if (textarea.dataset.selectingImage === 'true') {
+            return;
+        }
+        saveChanges();
+    });
     
     // 处理键盘事件
     textarea.addEventListener('keydown', (e) => {
@@ -1836,6 +1902,17 @@ function editTaskContent(span, id) {
             // Ctrl+Enter 保存更改
             textarea.blur();
         } else if (e.key === 'Escape') {
+            // 恢复任务项容器的原始样式
+            if (taskContent) {
+                taskContent.style.minWidth = '';
+                taskContent.style.maxWidth = '';
+                taskContent.style.width = '';
+                taskContent.style.flex = '';
+            }
+            if (taskItemContainer) {
+                taskItemContainer.style.maxWidth = '';
+                taskItemContainer.style.width = '';
+            }
             textarea.value = currentContent; // 还原更改
             textarea.blur();
         }
@@ -2184,16 +2261,30 @@ function copyTaskToClipboard(taskId) {
 
 // Edit task from menu
 function editTaskFromMenu(taskId) {
+    console.log('菜单编辑事件触发，任务ID:', taskId);
     const task = allTasks.find(t => t.ID === taskId);
-    if (!task) return;
+    if (!task) {
+        console.error('未找到任务，ID:', taskId);
+        return;
+    }
     
     // Find the task element and trigger edit mode
     const taskElement = document.querySelector(`[data-id="${taskId}"]`);
     if (taskElement) {
         const contentSpan = taskElement.querySelector('.break-words span');
         if (contentSpan) {
-            editTaskContent(contentSpan, taskId);
+            console.log('找到内容元素，开始编辑');
+            try {
+                editTaskContent(contentSpan, taskId);
+            } catch (error) {
+                console.error('editTaskContent 函数执行错误:', error);
+                alert('编辑功能出现错误: ' + error.message);
+            }
+        } else {
+            console.error('未找到内容元素');
         }
+    } else {
+        console.error('未找到任务元素');
     }
 }
 
@@ -2317,7 +2408,7 @@ async function loadComments(taskId) {
         if (response.ok) {
             const result = await response.json();
             const comments = result.data || [];
-            renderComments(comments);
+            renderComments(comments, taskId);
         } else {
             console.error('Failed to load comments');
         }
@@ -2327,7 +2418,7 @@ async function loadComments(taskId) {
 }
 
 // 渲染评论函数
-function renderComments(comments) {
+function renderComments(comments, taskId) {
     const commentsList = document.getElementById('comments-list');
     commentsList.innerHTML = '';
 
@@ -2342,20 +2433,62 @@ function renderComments(comments) {
         
         const date = new Date(comment.CreatedAt);
         const username = comment.User?.username || '';
-        commentEl.innerHTML = `
-            <div class="flex items-center justify-between mb-2">
-                ${username ? `<span class="font-medium text-sm">${username}</span>` : '<span class="font-medium text-sm text-secondary">Anonymous</span>'}
-                <span class="text-xs text-secondary">${date.toLocaleString('zh-CN', {
-                    timeZone: 'Asia/Shanghai',
-                    hour12: false,
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                })}</span>
-            </div>
-            <p class="text-sm">${comment.content}</p>
+        
+        // 创建评论头部（用户名、时间、删除按钮）
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'flex items-center justify-between mb-2';
+        
+        const userSpan = document.createElement('span');
+        userSpan.className = username ? 'font-medium text-sm' : 'font-medium text-sm text-secondary';
+        userSpan.textContent = username || 'Anonymous';
+        
+        const rightDiv = document.createElement('div');
+        rightDiv.className = 'flex items-center space-x-2';
+        
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'text-xs text-secondary';
+        timeSpan.textContent = date.toLocaleString('zh-CN', {
+            timeZone: 'Asia/Shanghai',
+            hour12: false,
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // 创建删除按钮
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'text-red-500 hover:text-red-700 transition-colors';
+        deleteBtn.title = '删除评论';
+        deleteBtn.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
         `;
+        
+        // 添加删除事件监听器
+        deleteBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (confirm('确定要删除这条评论吗？')) {
+                await deleteComment(taskId, comment.ID);
+            }
+        });
+        
+        rightDiv.appendChild(timeSpan);
+        rightDiv.appendChild(deleteBtn);
+        
+        headerDiv.appendChild(userSpan);
+        headerDiv.appendChild(rightDiv);
+        
+        // 创建评论内容
+        const contentP = document.createElement('p');
+        contentP.className = 'text-sm';
+        contentP.textContent = comment.content;
+        
+        commentEl.appendChild(headerDiv);
+        commentEl.appendChild(contentP);
         
         commentsList.appendChild(commentEl);
     });
@@ -2380,6 +2513,54 @@ async function addComment(taskId, content) {
         }
     } catch (error) {
         console.error('Error adding comment:', error);
+    }
+}
+
+// 删除评论函数
+async function deleteComment(taskId, commentId) {
+    try {
+        console.log('Attempting to delete comment:', { taskId, commentId });
+        const token = localStorage.getItem('token');
+        console.log('Using token:', token ? 'Token exists' : 'No token found');
+        
+        const response = await fetch(`/api/tasks/${taskId}/comments/${commentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        console.log('Delete response status:', response.status);
+        
+        if (response.ok) {
+            console.log('Comment deleted successfully');
+            // 更新评论列表
+            loadComments(taskId);
+            
+            // 更新任务列表以更新评论计数
+            await loadTasks();
+            
+            // 更新评论数量显示
+            const commentCountElement = document.querySelector(`li[data-id="${taskId}"] .absolute`);
+            if (commentCountElement) {
+                // 获取当前任务的评论数
+                const task = allTasks.find(t => t.ID === parseInt(taskId));
+                if (task && task.comment_count > 0) {
+                    // 如果还有评论，更新数量
+                    commentCountElement.textContent = task.comment_count;
+                } else {
+                    // 如果没有评论了，移除评论数量标记
+                    commentCountElement.remove();
+                }
+            }
+        } else {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Failed to delete comment:', response.status, errorData);
+            alert(`删除评论失败: ${errorData.error || response.statusText}`);
+        }
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        alert('删除评论时发生错误: ' + error.message);
     }
 }
 
@@ -2720,6 +2901,10 @@ if ('serviceWorker' in navigator) {
 }
 
 // 图片上传功能
+// 存储累积的文件列表
+let accumulatedDesktopFiles = [];
+let accumulatedMobileFiles = [];
+
 function setupImageUpload() {
     // 桌面端图片上传
     const desktopImageInput = document.getElementById('image-input');
@@ -2738,7 +2923,19 @@ function setupImageUpload() {
         });
         
         desktopImageInput.addEventListener('change', (e) => {
-            handleImagePreview(e.target.files, desktopPreview);
+            // 将新选择的文件添加到累积列表中
+            const newFiles = Array.from(e.target.files);
+            accumulatedDesktopFiles = accumulatedDesktopFiles.concat(newFiles);
+            
+            // 先清空文件输入框的 value，但保留 files 引用
+            const originalFiles = e.target.files;
+            e.target.value = '';
+            
+            // 更新文件输入框的文件列表
+            updateFileInput(desktopImageInput, accumulatedDesktopFiles);
+            
+            // 更新预览
+            handleImagePreview(accumulatedDesktopFiles, desktopPreview, 'desktop');
         });
     }
     
@@ -2749,13 +2946,34 @@ function setupImageUpload() {
         });
         
         mobileImageInput.addEventListener('change', (e) => {
-            handleImagePreview(e.target.files, mobilePreview);
+            // 将新选择的文件添加到累积列表中
+            const newFiles = Array.from(e.target.files);
+            accumulatedMobileFiles = accumulatedMobileFiles.concat(newFiles);
+            
+            // 先清空文件输入框的 value，但保留 files 引用
+            const originalFiles = e.target.files;
+            e.target.value = '';
+            
+            // 更新文件输入框的文件列表
+            updateFileInput(mobileImageInput, accumulatedMobileFiles);
+            
+            // 更新预览
+            handleImagePreview(accumulatedMobileFiles, mobilePreview, 'mobile');
         });
     }
 }
 
+// 更新文件输入框的文件列表
+function updateFileInput(input, files) {
+    const dt = new DataTransfer();
+    files.forEach(file => {
+        dt.items.add(file);
+    });
+    input.files = dt.files;
+}
+
 // 处理图片预览
-function handleImagePreview(files, previewContainer) {
+function handleImagePreview(files, previewContainer, platform = 'desktop') {
     if (!files || files.length === 0) {
         previewContainer.classList.add('hidden');
         return;
@@ -2772,7 +2990,7 @@ function handleImagePreview(files, previewContainer) {
                 imageDiv.className = 'relative inline-block mr-2 mb-2';
                 imageDiv.innerHTML = `
                     <img src="${e.target.result}" alt="Preview" class="w-16 h-16 object-cover rounded border">
-                    <button type="button" onclick="removeImagePreview(this, ${index})" 
+                    <button type="button" onclick="removeImagePreview(this, ${index}, '${platform}')" 
                             class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">
                         ×
                     </button>
@@ -2785,25 +3003,25 @@ function handleImagePreview(files, previewContainer) {
 }
 
 // 移除图片预览
-function removeImagePreview(button, index) {
+function removeImagePreview(button, index, platform = 'desktop') {
     const previewContainer = button.closest('#image-preview, #mobile-image-preview');
-    const isDesktop = previewContainer && previewContainer.id === 'image-preview';
+    const isDesktop = platform === 'desktop';
     const imageInput = document.getElementById(isDesktop ? 'image-input' : 'mobile-image-input');
     
-    // 创建新的FileList（排除被删除的文件）
-    const dt = new DataTransfer();
-    const files = Array.from(imageInput.files);
-    
-    files.forEach((file, i) => {
-        if (i !== index) {
-            dt.items.add(file);
-        }
-    });
-    
-    imageInput.files = dt.files;
-    
-    // 重新生成预览
-    handleImagePreview(imageInput.files, previewContainer);
+    // 从累积文件列表中移除指定索引的文件
+    if (isDesktop) {
+        accumulatedDesktopFiles.splice(index, 1);
+        // 更新文件输入框
+        updateFileInput(imageInput, accumulatedDesktopFiles);
+        // 重新生成预览
+        handleImagePreview(accumulatedDesktopFiles, previewContainer, 'desktop');
+    } else {
+        accumulatedMobileFiles.splice(index, 1);
+        // 更新文件输入框
+        updateFileInput(imageInput, accumulatedMobileFiles);
+        // 重新生成预览
+        handleImagePreview(accumulatedMobileFiles, previewContainer, 'mobile');
+    }
 }
 
 // 显示图片模态框

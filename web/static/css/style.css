@@ -53,6 +53,11 @@ h1 {
     transition: all 0.2s ease;
 }
 
+.dark .task-item {
+    background-color: #1e293b;
+    border-color: #334155;
+}
+
 .task-item:hover {
     border-color: var(--task-border-hover);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -477,11 +482,11 @@ h1 {
     line-height: 1.4;
 }
 
-/* 置顶任务样式 */
-.task-item.pinned {
-    border-color: #fbbf24;
-    background-color: #fffbeb;
-}
+/* 置顶任务样式，不需要*/
+
+
+/* 黑暗模式下的置顶任务样式，不需要 */
+
 
 .task-item.pinned::before {
     content: '📌';

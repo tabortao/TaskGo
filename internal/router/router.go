@@ -42,6 +42,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			// 评论相关路由
 			authed.GET("/tasks/:id/comments", handlers.GetTaskComments(db))
 			authed.POST("/tasks/:id/comments", handlers.CreateTaskComment(db))
+			authed.DELETE("/tasks/:id/comments/:commentId", handlers.DeleteTaskComment(db))
 
 			// 系统设置相关路由
 			authed.GET("/system/settings", handlers.GetSystemSettings(db))

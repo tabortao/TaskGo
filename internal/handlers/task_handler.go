@@ -120,11 +120,15 @@ func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
 		}
 
 		// 处理每个上传的图片
-		for i, fileHeader := range form.File["images"] {
-			// 生成基于时间戳和索引的唯一文件名（YYYYMMDDHHMMSS_index格式）
+		for _, fileHeader := range form.File["images"] {
+			// 生成基于时间戳-原文件名的唯一文件名格式
 			timestamp := time.Now().Format("20060102150405") // 使用YYYYMMDDHHMMSS格式
 			ext := filepath.Ext(fileHeader.Filename) // 获取原文件扩展名
-			filename := fmt.Sprintf("%s_%d%s", timestamp, i+1, ext) // 时间格式文件名加索引
+			originalName := strings.TrimSuffix(fileHeader.Filename, ext) // 获取不含扩展名的原文件名
+			// 清理原文件名，移除特殊字符
+			originalName = strings.ReplaceAll(originalName, " ", "_")
+			originalName = strings.ReplaceAll(originalName, "-", "_")
+			filename := fmt.Sprintf("%s-%s%s", timestamp, originalName, ext) // 时间戳-原文件名格式
 			filePath := filepath.Join(imageDir, filename)
 
 			// 打开上传的文件
@@ -258,9 +262,16 @@ func UpdateTask(db *gorm.DB) gin.HandlerFunc {
 				}
 
 				for _, fileHeader := range files {
-					// 生成唯一文件名
-					ext := filepath.Ext(fileHeader.Filename)
-					filename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), strings.ReplaceAll(fileHeader.Filename, ext, ""), ext)
+				// 生成基于时间戳-原文件名的唯一文件名格式
+				timestamp := time.Now().Format("20060102150405") // 使用YYYYMMDDHHMMSS格式
+				ext := filepath.Ext(fileHeader.Filename) // 获取原文件扩展名
+				originalName := strings.TrimSuffix(fileHeader.Filename, ext) // 获取不含扩展名的原文件名
+				// 清理原文件名，移除特殊字符
+				originalName = strings.ReplaceAll(originalName, " ", "_")
+				originalName = strings.ReplaceAll(originalName, "-", "_")
+				// 添加纳秒时间戳确保唯一性（因为编辑时可能同时上传多个文件）
+				nanoSuffix := fmt.Sprintf("%d", time.Now().UnixNano()%1000000) // 取纳秒的后6位
+				filename := fmt.Sprintf("%s-%s_%s%s", timestamp, originalName, nanoSuffix, ext)
 					filePath := filepath.Join(uploadDir, filename)
 
 					// 保存文件
@@ -397,5 +408,36 @@ func CreateTaskComment(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, gin.H{"data": comment})
+	}
+}
+
+// DeleteTaskComment 删除任务评论
+func DeleteTaskComment(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, _ := c.Get("userID")
+		taskID, _ := strconv.Atoi(c.Param("id"))
+		commentID, _ := strconv.Atoi(c.Param("commentId"))
+
+		// 验证任务是否属于当前用户
+		var task models.Task
+		if err := db.Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+			return
+		}
+
+		// 验证评论是否存在且属于该任务
+		var comment models.Comment
+		if err := db.Where("id = ? AND task_id = ?", commentID, taskID).First(&comment).Error; err != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Comment not found"})
+			return
+		}
+
+		// 删除评论
+		if err := db.Delete(&comment).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete comment"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Comment deleted successfully"})
 	}
 }
