@@ -1341,17 +1341,19 @@ async function handleCreateTask(e) {
     const isDesktop = e.target.id === 'task-form';
     const input = document.getElementById(isDesktop ? 'task-input' : 'mobile-task-input');
     const inputValue = input.value.trim();
-    if (!inputValue) return;
+    
+    // 检查是否有图片上传
+    const imageInput = document.getElementById(isDesktop ? 'image-input' : 'mobile-image-input');
+    const hasImages = imageInput && imageInput.files.length > 0;
+    
+    // 如果既没有文字内容也没有图片，则返回
+    if (!inputValue && !hasImages) return;
 
     const tagMatches = [...inputValue.matchAll(/#([^\s#]+)/g)];
     const tags = tagMatches.map(match => match[1]);
     const content = inputValue.replace(/#([^\s#]+)/g, '').trim();
 
     const token = localStorage.getItem('token');
-    
-    // 检查是否有图片上传
-    const imageInput = document.getElementById(isDesktop ? 'image-input' : 'mobile-image-input');
-    const hasImages = imageInput && imageInput.files.length > 0;
     
     let res;
     if (hasImages) {
@@ -1538,15 +1540,69 @@ async function deleteTask(id) {
 
 function editTaskContent(span, id) {
     const currentContent = span.textContent;
+    const task = allTasks.find(t => t.ID === id);
+    if (!task) return;
+    
+    // 获取任务项容器
+    const taskItem = span.closest('.task-item');
+    const imagesContainer = taskItem.querySelector('.flex.flex-wrap.gap-2.mb-2');
+    
+    // 创建编辑容器
+    const editContainer = document.createElement('div');
+    editContainer.className = 'w-full';
     
     // 创建textarea替代input
     const textarea = document.createElement('textarea');
     textarea.value = currentContent;
-    textarea.className = 'w-full px-2 py-1 bg-background border border-border rounded resize-none overflow-hidden focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[24px]';
+    textarea.className = 'w-full px-2 py-1 bg-background border border-border rounded resize-none overflow-hidden focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[24px] mb-2';
     textarea.style.height = 'auto'; // 重置高度
     
+    editContainer.appendChild(textarea);
+    
+    // 如果有图片，创建可编辑的图片预览区域
+    let editableImages = [];
+    if (task.images && task.images.trim()) {
+        editableImages = task.images.split(',').filter(path => path.trim());
+        
+        const editImagesContainer = document.createElement('div');
+        editImagesContainer.className = 'flex flex-wrap gap-2 mb-2';
+        
+        editableImages.forEach((imagePath, index) => {
+            const imageWrapper = document.createElement('div');
+            imageWrapper.className = 'relative';
+            
+            const img = document.createElement('img');
+            img.src = imagePath.trim();
+            img.alt = '任务图片';
+            img.className = 'w-20 h-20 object-cover rounded border';
+            
+            // 删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors flex items-center justify-center';
+            deleteBtn.innerHTML = '×';
+            deleteBtn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                editableImages.splice(index, 1);
+                imageWrapper.remove();
+            };
+            
+            imageWrapper.appendChild(img);
+            imageWrapper.appendChild(deleteBtn);
+            editImagesContainer.appendChild(imageWrapper);
+        });
+        
+        editContainer.appendChild(editImagesContainer);
+    }
+    
     // 替换原有元素
-    span.parentElement.replaceChild(textarea, span);
+    span.parentElement.replaceChild(editContainer, span);
+    
+    // 隐藏原有的图片容器
+    if (imagesContainer) {
+        imagesContainer.style.display = 'none';
+    }
+    
     textarea.focus();
 
     // 自动调整高度
@@ -1563,18 +1619,33 @@ function editTaskContent(span, id) {
 
     const saveChanges = async () => {
         const newContent = textarea.value.trim();
-        if (newContent && newContent !== currentContent) {
+        const newImages = editableImages.join(',');
+        
+        // 检查是否有变化
+        const contentChanged = newContent !== currentContent;
+        const imagesChanged = newImages !== (task.images || '');
+        
+        if (contentChanged || imagesChanged) {
             const token = localStorage.getItem('token');
+            const updateData = {};
+            
+            if (contentChanged) {
+                updateData.content = newContent;
+            }
+            if (imagesChanged) {
+                updateData.images = newImages;
+            }
+            
             const res = await fetch(`/api/tasks/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ content: newContent })
+                body: JSON.stringify(updateData)
             });
             if (!res.ok) {
-                alert('Failed to update task content');
+                alert('更新任务失败');
             }
         }
         loadTasks(); // Always reload to ensure data consistency

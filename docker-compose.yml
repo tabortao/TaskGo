@@ -8,5 +8,13 @@ services:
     environment:
       - DATABASE_PATH=/app/db/taskgo.db
     volumes:
+      # 数据库文件映射
       - ./taskgo_data/db:/app/db
+      # 用户头像文件映射
       - ./taskgo_data/avatars:/app/web/static/avatars
+      # 任务图片文件映射
+      - ./taskgo_data/images:/app/web/static/images/tasks
+      # 附件文件映射（为后续功能预留）
+      - ./taskgo_data/attachments:/app/web/static/attachments
+    # 确保容器内用户权限正确
+    user: "1001:1001"
