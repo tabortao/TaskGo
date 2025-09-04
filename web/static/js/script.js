@@ -200,10 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logout-link').addEventListener('click', handleLogout);
 
     // User profile interactions
-    document.getElementById('user-profile').addEventListener('click', () => {
-        const menu = document.getElementById('user-menu');
-        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-    });
+    const userProfile = document.getElementById('user-profile');
+    if (userProfile) {
+        userProfile.addEventListener('click', () => {
+            const menu = document.getElementById('user-menu');
+            if (menu) {
+                menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+            }
+        });
+    }
 
     // Settings Modal
     const settingsModal = document.getElementById('settings-modal');
@@ -216,6 +221,27 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 设置当前主题选项
         document.querySelector(`input[name="theme-mode"][value="${currentTheme}"]`).checked = true;
+        
+        // 加载系统设置
+        loadSystemSettings();
+        
+        // 自动收缩侧边栏
+        const sidebar = document.getElementById('sidebar');
+        const mainContent = document.querySelector('.sidebar-adjusted');
+        const isDesktop = window.innerWidth >= 1024;
+        
+        if (isDesktop && !sidebar.classList.contains('collapsed')) {
+            // 桌面端收缩侧边栏
+            sidebar.classList.add('collapsed');
+            mainContent.classList.replace('lg:ml-[256px]', 'lg:ml-[60px]');
+            localStorage.setItem('sidebar-collapsed', 'true');
+        } else if (!isDesktop && sidebar.classList.contains('active')) {
+            // 移动端隐藏侧边栏
+            sidebar.classList.remove('active');
+            sidebar.style.transform = 'translateX(-100%)';
+            document.querySelector('.sidebar-overlay').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
     });
 
     closeBtn.addEventListener('click', () => {
@@ -230,6 +256,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('avatar-form').addEventListener('submit', handleAvatarUpload);
     document.getElementById('password-form').addEventListener('submit', handlePasswordChange);
+    
+    // 注册开关事件监听
+    const allowRegistrationToggle = document.getElementById('allow-registration');
+    if (allowRegistrationToggle) {
+        allowRegistrationToggle.addEventListener('change', handleRegistrationToggle);
+    }
     
     // 主题模式切换事件监听
     document.querySelectorAll('input[name="theme-mode"]').forEach(radio => {
@@ -1222,7 +1254,7 @@ function createTaskElement(task) {
             const img = document.createElement('img');
             img.src = imagePath.trim();
             img.alt = '任务图片';
-            img.className = 'w-20 h-20 object-cover rounded border hover:opacity-80 transition-opacity';
+            img.className = 'w-32 h-24 object-contain rounded border hover:opacity-80 transition-opacity bg-gray-50';
             img.onerror = () => {
                 // 如果图片加载失败，隐藏图片元素
                 imageWrapper.style.display = 'none';
@@ -1574,7 +1606,7 @@ function editTaskContent(span, id) {
             const img = document.createElement('img');
             img.src = imagePath.trim();
             img.alt = '任务图片';
-            img.className = 'w-20 h-20 object-cover rounded border';
+            img.className = 'w-32 h-24 object-contain rounded border bg-gray-50';
             
             // 删除按钮
             const deleteBtn = document.createElement('button');
@@ -2689,3 +2721,63 @@ function showImageModal(imageSrc) {
 document.addEventListener('DOMContentLoaded', () => {
     setupImageUpload();
 });
+
+// 系统设置相关功能
+// 加载系统设置
+async function loadSystemSettings() {
+    try {
+        const response = await fetch('/api/system/settings', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            const settings = result.data; // 后端返回的数据在data字段中
+            
+            // 设置注册开关状态
+            const allowRegistrationToggle = document.getElementById('allow-registration');
+            if (allowRegistrationToggle) {
+                // settings是map格式，直接通过key访问
+                const allowRegistration = settings['allow_registration'];
+                allowRegistrationToggle.checked = allowRegistration ? allowRegistration === 'true' : true;
+            }
+        } else {
+            console.error('Failed to load system settings:', response.statusText);
+        }
+    } catch (error) {
+        console.error('Error loading system settings:', error);
+    }
+}
+
+// 处理注册开关切换
+async function handleRegistrationToggle(event) {
+    const isAllowed = event.target.checked;
+    
+    try {
+        const response = await fetch('/api/system/settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({
+                key: 'allow_registration',
+                value: isAllowed.toString()
+            })
+        });
+        
+        if (response.ok) {
+            console.log('Registration setting updated successfully');
+        } else {
+            console.error('Failed to update registration setting:', response.statusText);
+            // 恢复开关状态
+            event.target.checked = !isAllowed;
+        }
+    } catch (error) {
+        console.error('Error updating registration setting:', error);
+        // 恢复开关状态
+        event.target.checked = !isAllowed;
+    }
+}

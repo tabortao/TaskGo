@@ -29,3 +29,10 @@ type Comment struct {
 	Task    Task   `gorm:"foreignKey:TaskID"`
 	User    User   `gorm:"foreignKey:UserID"`
 }
+
+// SystemSetting 系统设置模型
+type SystemSetting struct {
+	gorm.Model
+	Key   string `gorm:"unique" json:"key"`     // 设置键名
+	Value string `json:"value"`                  // 设置值
+}

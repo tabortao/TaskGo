@@ -2,6 +2,23 @@
 
 /* 自定义样式 */
 
+/* 开关按钮样式 */
+.toggle-switch {
+    background-color: #e5e7eb;
+}
+
+.toggle-switch.active {
+    background-color: #3b82f6;
+}
+
+.toggle-switch .toggle-dot {
+    transform: translateX(0.125rem);
+}
+
+.toggle-switch.active .toggle-dot {
+    transform: translateX(1.25rem);
+}
+
 /* 下拉刷新相关样式 */
 .transition-transform {
     transition-property: transform;

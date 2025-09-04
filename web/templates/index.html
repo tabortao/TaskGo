@@ -405,6 +405,21 @@
                     </div>
                 </div>
                 
+                <!-- 系统管理设置 -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-medium text-secondary mb-2">System Management</h3>
+                    <div class="flex items-center justify-between">
+                        <label for="allow-registration" class="text-sm">Allow User Registration</label>
+                        <div class="relative">
+                            <input type="checkbox" id="allow-registration" class="sr-only">
+                            <div class="toggle-switch w-11 h-6 bg-gray-200 rounded-full cursor-pointer transition-colors duration-200 ease-in-out" onclick="toggleRegistration()">
+                                <div class="toggle-dot w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out translate-x-0.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-secondary mt-1">When disabled, new users cannot register accounts</p>
+                </div>
+                
                 <!-- 密码修改 -->
                 <form id="password-form">
                     <h3 class="text-sm font-medium text-secondary mb-2">Change Password</h3>

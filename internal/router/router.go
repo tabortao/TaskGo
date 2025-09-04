@@ -21,7 +21,8 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 
 	api := r.Group("/api")
 	{
-		api.POST("/register", handlers.Register(db))
+		// 注册路由添加检查中间件
+		api.POST("/register", handlers.CheckRegistrationAllowed(db), handlers.Register(db))
 		api.POST("/login", handlers.Login(db))
 
 		authed := api.Group("/")
@@ -41,6 +42,10 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			// 评论相关路由
 			authed.GET("/tasks/:id/comments", handlers.GetTaskComments(db))
 			authed.POST("/tasks/:id/comments", handlers.CreateTaskComment(db))
+
+			// 系统设置相关路由
+			authed.GET("/system/settings", handlers.GetSystemSettings(db))
+			authed.PUT("/system/settings", handlers.UpdateSystemSetting(db))
 		}
 	}
 

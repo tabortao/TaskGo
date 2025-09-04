@@ -121,10 +121,10 @@ func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
 
 		// 处理每个上传的图片
 		for _, fileHeader := range form.File["images"] {
-			// 生成基于时间戳的唯一文件名
-			timestamp := time.Now().UnixNano() // 使用纳秒级时间戳确保唯一性
+			// 生成基于时间戳的唯一文件名（YYYYMMDDHHMMSS格式）
+			timestamp := time.Now().Format("20060102150405") // 使用YYYYMMDDHHMMSS格式
 			ext := filepath.Ext(fileHeader.Filename) // 获取原文件扩展名
-			filename := fmt.Sprintf("%d%s", timestamp, ext) // 纯时间戳文件名
+			filename := fmt.Sprintf("%s%s", timestamp, ext) // 时间格式文件名
 			filePath := filepath.Join(imageDir, filename)
 
 			// 打开上传的文件
@@ -268,6 +268,20 @@ func DeleteTask(db *gorm.DB) gin.HandlerFunc {
 		if err := db.Where("id = ? AND user_id = ?", id, userID).First(&task).Error; err != nil {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
 			return
+		}
+
+		// 删除任务关联的图片文件
+		if task.Images != "" {
+			imagePaths := strings.Split(task.Images, ",")
+			for _, imagePath := range imagePaths {
+				imagePath = strings.TrimSpace(imagePath)
+				if imagePath != "" {
+					// 构建完整的文件路径
+					fullPath := filepath.Join("web", "static", "images", "tasks", filepath.Base(imagePath))
+					// 删除文件，忽略错误（文件可能已经不存在）
+					os.Remove(fullPath)
+				}
+			}
 		}
 
 		db.Delete(&task)
