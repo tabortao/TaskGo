@@ -18,6 +18,7 @@ type Task struct {
 	Remark    string `json:"remark"`
 	Pinned    bool   `gorm:"default:false" json:"pinned"`
 	Favorite  bool   `gorm:"default:false" json:"favorite"`
+	Images    string `json:"images"` // 存储图片路径，多个图片用逗号分隔
 }
 
 type Comment struct {

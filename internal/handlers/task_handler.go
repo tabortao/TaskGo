@@ -1,9 +1,14 @@
 package handlers
 
 import (
+	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"taskgo/internal/models"
 
@@ -82,8 +87,96 @@ func GetTask(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+// createTaskWithFiles 处理带文件上传的任务创建
+func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
+	// 获取表单数据
+	content := c.PostForm("content")
+	tags := c.PostForm("tags")
+
+	if content == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "任务内容不能为空"})
+		return
+	}
+
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "用户未认证"})
+		return
+	}
+
+	// 处理图片上传
+	var imagePaths []string
+	form, err := c.MultipartForm()
+	if err == nil && form.File["images"] != nil {
+		// 确保图片目录存在
+		imageDir := "web/static/images/tasks"
+		if err := os.MkdirAll(imageDir, 0755); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "创建图片目录失败"})
+			return
+		}
+
+		// 处理每个上传的图片
+		for _, fileHeader := range form.File["images"] {
+			// 生成唯一文件名
+			timestamp := time.Now().Unix()
+			filename := fmt.Sprintf("%d_%s", timestamp, fileHeader.Filename)
+			filePath := filepath.Join(imageDir, filename)
+
+			// 打开上传的文件
+			file, err := fileHeader.Open()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "打开上传文件失败"})
+				return
+			}
+			defer file.Close()
+
+			// 创建目标文件
+			dst, err := os.Create(filePath)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "创建文件失败"})
+				return
+			}
+			defer dst.Close()
+
+			// 复制文件内容
+			if _, err := io.Copy(dst, file); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败"})
+				return
+			}
+
+			// 保存相对路径用于数据库存储
+			relativePath := "/static/images/tasks/" + filename
+			imagePaths = append(imagePaths, relativePath)
+		}
+	}
+
+	// 创建任务
+	task := models.Task{
+		Content: content,
+		Tags:    tags,
+		UserID:  userID.(uint),
+		Images:  strings.Join(imagePaths, ","), // 多个图片路径用逗号分隔
+	}
+
+	if err := db.Create(&task).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建任务失败"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": task})
+}
+
 func CreateTask(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 检查是否为multipart/form-data请求
+		contentType := c.GetHeader("Content-Type")
+		if strings.Contains(contentType, "multipart/form-data") {
+			// 处理带文件上传的请求
+			createTaskWithFiles(c, db)
+			return
+		}
+
+		// 处理普通JSON请求
 		var input models.Task
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -1208,6 +1208,37 @@ function createTaskElement(task) {
     contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
     content.appendChild(contentText);
 
+    // 图片容器
+    const imagesContainer = document.createElement('div');
+    imagesContainer.className = 'flex flex-wrap gap-2 mb-2';
+    
+    // 添加图片到图片容器
+    if (task.images && task.images.trim()) {
+        const imagePaths = task.images.split(',').filter(path => path.trim());
+        imagePaths.forEach(imagePath => {
+            const imageWrapper = document.createElement('div');
+            imageWrapper.className = 'relative cursor-pointer';
+            
+            const img = document.createElement('img');
+            img.src = imagePath.trim();
+            img.alt = '任务图片';
+            img.className = 'w-20 h-20 object-cover rounded border hover:opacity-80 transition-opacity';
+            img.onerror = () => {
+                // 如果图片加载失败，隐藏图片元素
+                imageWrapper.style.display = 'none';
+            };
+            
+            // 点击图片放大查看
+            img.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showImageModal(imagePath.trim());
+            });
+            
+            imageWrapper.appendChild(img);
+            imagesContainer.appendChild(imageWrapper);
+        });
+    }
+
     // 标签容器
     const tagsContainer = document.createElement('div');
     tagsContainer.className = 'flex flex-wrap gap-1';
@@ -1240,6 +1271,7 @@ function createTaskElement(task) {
 
     taskContent.appendChild(timestamp);
     taskContent.appendChild(content);
+    taskContent.appendChild(imagesContainer);
     taskContent.appendChild(tagsContainer);
 
     // 操作按钮容器 - 直接显示在右上角
@@ -1316,20 +1348,58 @@ async function handleCreateTask(e) {
     const content = inputValue.replace(/#([^\s#]+)/g, '').trim();
 
     const token = localStorage.getItem('token');
-    const res = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ content, tags: tags.join(',') })
-    });
+    
+    // 检查是否有图片上传
+    const imageInput = document.getElementById(isDesktop ? 'image-input' : 'mobile-image-input');
+    const hasImages = imageInput && imageInput.files.length > 0;
+    
+    let res;
+    if (hasImages) {
+        // 使用FormData处理文件上传
+        const formData = new FormData();
+        formData.append('content', content);
+        formData.append('tags', tags.join(','));
+        
+        // 添加所有选中的图片
+        for (let i = 0; i < imageInput.files.length; i++) {
+            formData.append('images', imageInput.files[i]);
+        }
+        
+        res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+    } else {
+        // 普通JSON请求
+        res = await fetch('/api/tasks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content, tags: tags.join(',') })
+        });
+    }
 
     if (res.ok) {
         input.value = '';
         // 重置输入框高度到默认值
         input.style.height = 'auto';
         input.style.height = '48px'; // 恢复到最小高度
+        
+        // 清空图片输入和预览
+        if (imageInput) {
+            imageInput.value = '';
+            const previewContainer = document.getElementById(isDesktop ? 'image-preview' : 'mobile-image-preview');
+            if (previewContainer) {
+                previewContainer.innerHTML = '';
+                previewContainer.classList.add('hidden');
+            }
+        }
+        
         loadTasks();
     } else {
         alert('Failed to create task');
@@ -2400,3 +2470,151 @@ if ('serviceWorker' in navigator) {
             .catch(err => console.log('ServiceWorker registration failed: ', err));
     });
 }
+
+// 图片上传功能
+function setupImageUpload() {
+    // 桌面端图片上传
+    const desktopImageInput = document.getElementById('image-input');
+    const desktopImageBtn = document.getElementById('image-btn');
+    const desktopPreview = document.getElementById('image-preview');
+    
+    // 移动端图片上传
+    const mobileImageInput = document.getElementById('mobile-image-input');
+    const mobileImageBtn = document.getElementById('mobile-image-btn');
+    const mobilePreview = document.getElementById('mobile-image-preview');
+    
+    // 桌面端事件
+    if (desktopImageBtn && desktopImageInput) {
+        desktopImageBtn.addEventListener('click', () => {
+            desktopImageInput.click();
+        });
+        
+        desktopImageInput.addEventListener('change', (e) => {
+            handleImagePreview(e.target.files, desktopPreview);
+        });
+    }
+    
+    // 移动端事件
+    if (mobileImageBtn && mobileImageInput) {
+        mobileImageBtn.addEventListener('click', () => {
+            mobileImageInput.click();
+        });
+        
+        mobileImageInput.addEventListener('change', (e) => {
+            handleImagePreview(e.target.files, mobilePreview);
+        });
+    }
+}
+
+// 处理图片预览
+function handleImagePreview(files, previewContainer) {
+    if (!files || files.length === 0) {
+        previewContainer.classList.add('hidden');
+        return;
+    }
+    
+    previewContainer.innerHTML = '';
+    previewContainer.classList.remove('hidden');
+    
+    Array.from(files).forEach((file, index) => {
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imageDiv = document.createElement('div');
+                imageDiv.className = 'relative inline-block mr-2 mb-2';
+                imageDiv.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview" class="w-16 h-16 object-cover rounded border">
+                    <button type="button" onclick="removeImagePreview(this, ${index})" 
+                            class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600">
+                        ×
+                    </button>
+                `;
+                previewContainer.appendChild(imageDiv);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
+
+// 移除图片预览
+function removeImagePreview(button, index) {
+    const previewContainer = button.closest('#image-preview, #mobile-image-preview');
+    const isDesktop = previewContainer && previewContainer.id === 'image-preview';
+    const imageInput = document.getElementById(isDesktop ? 'image-input' : 'mobile-image-input');
+    
+    // 创建新的FileList（排除被删除的文件）
+    const dt = new DataTransfer();
+    const files = Array.from(imageInput.files);
+    
+    files.forEach((file, i) => {
+        if (i !== index) {
+            dt.items.add(file);
+        }
+    });
+    
+    imageInput.files = dt.files;
+    
+    // 重新生成预览
+    handleImagePreview(imageInput.files, previewContainer);
+}
+
+// 显示图片模态框
+function showImageModal(imageSrc) {
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50';
+    modal.style.backdropFilter = 'blur(4px)';
+    
+    // 创建图片容器
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'relative max-w-full max-h-full';
+    
+    // 创建图片元素
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.alt = '任务图片';
+    img.className = 'max-w-full max-h-full object-contain rounded';
+    
+    // 创建关闭按钮
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'absolute top-2 right-2 bg-black/50 text-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-black/70 transition-colors';
+    closeBtn.innerHTML = '×';
+    closeBtn.style.fontSize = '20px';
+    
+    // 关闭模态框函数
+    const closeModal = () => {
+        document.body.removeChild(modal);
+        document.body.style.overflow = 'auto';
+    };
+    
+    // 事件监听
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // ESC键关闭
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', handleKeyDown);
+        }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    
+    // 组装模态框
+    imageContainer.appendChild(img);
+    imageContainer.appendChild(closeBtn);
+    modal.appendChild(imageContainer);
+    
+    // 显示模态框
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+}
+
+// 在DOMContentLoaded中初始化图片上传功能
+document.addEventListener('DOMContentLoaded', () => {
+    setupImageUpload();
+});
