@@ -225,17 +225,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 加载系统设置
         loadSystemSettings();
         
-        // 自动收缩侧边栏
+        // 移动端点击设置时收起侧边栏
         const sidebar = document.getElementById('sidebar');
-        const mainContent = document.querySelector('.sidebar-adjusted');
         const isDesktop = window.innerWidth >= 1024;
         
-        if (isDesktop && !sidebar.classList.contains('collapsed')) {
-            // 桌面端收缩侧边栏
-            sidebar.classList.add('collapsed');
-            mainContent.classList.replace('lg:ml-[256px]', 'lg:ml-[60px]');
-            localStorage.setItem('sidebar-collapsed', 'true');
-        } else if (!isDesktop && sidebar.classList.contains('active')) {
+        // 只在移动端收起侧边栏，桌面端保持当前状态
+        if (!isDesktop && sidebar.classList.contains('active')) {
             // 移动端隐藏侧边栏
             sidebar.classList.remove('active');
             sidebar.style.transform = 'translateX(-100%)';
@@ -1602,6 +1597,7 @@ function editTaskContent(span, id) {
         editableImages.forEach((imagePath, index) => {
             const imageWrapper = document.createElement('div');
             imageWrapper.className = 'relative';
+            imageWrapper.dataset.imageIndex = index; // 添加数据属性用于标识
             
             const img = document.createElement('img');
             img.src = imagePath.trim();
@@ -1615,7 +1611,12 @@ function editTaskContent(span, id) {
             deleteBtn.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                editableImages.splice(index, 1);
+                // 通过图片路径来删除，而不是使用索引
+                const imagePathToRemove = imagePath.trim();
+                const imageIndex = editableImages.findIndex(path => path.trim() === imagePathToRemove);
+                if (imageIndex !== -1) {
+                    editableImages.splice(imageIndex, 1);
+                }
                 imageWrapper.remove();
             };
             
@@ -1626,6 +1627,96 @@ function editTaskContent(span, id) {
         
         editContainer.appendChild(editImagesContainer);
     }
+    
+    // 添加图片上传功能
+    const addImageContainer = document.createElement('div');
+    addImageContainer.className = 'mb-2';
+    
+    // 创建隐藏的文件输入
+    const imageInput = document.createElement('input');
+    imageInput.type = 'file';
+    imageInput.accept = 'image/*';
+    imageInput.multiple = true;
+    imageInput.className = 'hidden';
+    imageInput.id = `edit-image-input-${id}`;
+    
+    // 创建添加图片按钮
+    const addImageBtn = document.createElement('button');
+    addImageBtn.type = 'button';
+    addImageBtn.className = 'inline-flex items-center px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border transition-colors';
+    addImageBtn.innerHTML = `
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z" />
+        </svg>
+        添加图片
+    `;
+    
+    // 点击按钮触发文件选择
+    addImageBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        imageInput.click();
+    });
+    
+    // 处理文件选择
+    imageInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            // 创建或获取图片容器
+            let editImagesContainer = editContainer.querySelector('.flex.flex-wrap.gap-2.mb-2');
+            if (!editImagesContainer) {
+                editImagesContainer = document.createElement('div');
+                editImagesContainer.className = 'flex flex-wrap gap-2 mb-2';
+                editContainer.insertBefore(editImagesContainer, addImageContainer);
+            }
+            
+            // 处理每个选中的文件
+            Array.from(files).forEach((file) => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        // 生成临时的图片路径（使用data URL）
+                        const tempImagePath = e.target.result;
+                        editableImages.push(tempImagePath);
+                        
+                        // 创建图片预览
+                        const imageWrapper = document.createElement('div');
+                        imageWrapper.className = 'relative';
+                        
+                        const img = document.createElement('img');
+                        img.src = tempImagePath;
+                        img.alt = '新增图片';
+                        img.className = 'w-32 h-24 object-contain rounded border bg-gray-50';
+                        
+                        // 删除按钮
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors flex items-center justify-center';
+                        deleteBtn.innerHTML = '×';
+                        deleteBtn.onclick = (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const imageIndex = editableImages.findIndex(path => path === tempImagePath);
+                            if (imageIndex !== -1) {
+                                editableImages.splice(imageIndex, 1);
+                            }
+                            imageWrapper.remove();
+                        };
+                        
+                        imageWrapper.appendChild(img);
+                        imageWrapper.appendChild(deleteBtn);
+                        editImagesContainer.appendChild(imageWrapper);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+        // 清空文件输入，允许重复选择同一文件
+        imageInput.value = '';
+    });
+    
+    addImageContainer.appendChild(imageInput);
+    addImageContainer.appendChild(addImageBtn);
+    editContainer.appendChild(addImageContainer);
     
     // 替换原有元素
     span.parentElement.replaceChild(editContainer, span);
@@ -1651,33 +1742,87 @@ function editTaskContent(span, id) {
 
     const saveChanges = async () => {
         const newContent = textarea.value.trim();
-        const newImages = editableImages.join(',');
+        
+        // 分离现有图片和新增图片
+        const existingImages = [];
+        const newImageFiles = [];
+        
+        editableImages.forEach(imagePath => {
+            if (imagePath.startsWith('data:')) {
+                // 这是新增的图片（data URL格式）
+                // 将 data URL 转换为 File 对象
+                const arr = imagePath.split(',');
+                const mime = arr[0].match(/:(.*?);/)[1];
+                const bstr = atob(arr[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                const file = new File([u8arr], `image_${Date.now()}.${mime.split('/')[1]}`, { type: mime });
+                newImageFiles.push(file);
+            } else {
+                // 这是现有的图片路径
+                existingImages.push(imagePath);
+            }
+        });
+        
+        const newImages = existingImages.join(',');
         
         // 检查是否有变化
         const contentChanged = newContent !== currentContent;
-        const imagesChanged = newImages !== (task.images || '');
+        const imagesChanged = newImages !== (task.images || '') || newImageFiles.length > 0;
+        
+        // 检查是否既没有内容也没有图片
+        if (newContent === '' && newImages === '' && newImageFiles.length === 0) {
+            alert('任务内容和图片不能同时为空');
+            return;
+        }
         
         if (contentChanged || imagesChanged) {
             const token = localStorage.getItem('token');
-            const updateData = {};
             
-            if (contentChanged) {
-                updateData.content = newContent;
-            }
-            if (imagesChanged) {
-                updateData.images = newImages;
-            }
-            
-            const res = await fetch(`/api/tasks/${id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(updateData)
-            });
-            if (!res.ok) {
-                alert('更新任务失败');
+            if (newImageFiles.length > 0) {
+                // 有新增图片，使用 FormData 上传
+                const formData = new FormData();
+                formData.append('content', newContent);
+                formData.append('images', newImages); // 现有图片路径
+                
+                // 添加新图片文件
+                newImageFiles.forEach((file, index) => {
+                    formData.append('newImages', file);
+                });
+                
+                const res = await fetch(`/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                
+                if (!res.ok) {
+                    alert('更新任务失败');
+                }
+            } else {
+                // 没有新增图片，使用 JSON 格式
+                const updateData = {
+                    content: newContent,
+                    images: newImages
+                };
+                
+                const res = await fetch(`/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!res.ok) {
+                    alert('更新任务失败');
+                }
             }
         }
         loadTasks(); // Always reload to ensure data consistency
@@ -2738,10 +2883,19 @@ async function loadSystemSettings() {
             
             // 设置注册开关状态
             const allowRegistrationToggle = document.getElementById('allow-registration');
-            if (allowRegistrationToggle) {
+            const toggleSwitch = document.querySelector('.toggle-switch');
+            if (allowRegistrationToggle && toggleSwitch) {
                 // settings是map格式，直接通过key访问
                 const allowRegistration = settings['allow_registration'];
-                allowRegistrationToggle.checked = allowRegistration ? allowRegistration === 'true' : true;
+                const isAllowed = allowRegistration ? allowRegistration === 'true' : true;
+                allowRegistrationToggle.checked = isAllowed;
+                
+                // 设置视觉状态
+                if (isAllowed) {
+                    toggleSwitch.classList.add('active');
+                } else {
+                    toggleSwitch.classList.remove('active');
+                }
             }
         } else {
             console.error('Failed to load system settings:', response.statusText);
@@ -2754,6 +2908,14 @@ async function loadSystemSettings() {
 // 处理注册开关切换
 async function handleRegistrationToggle(event) {
     const isAllowed = event.target.checked;
+    const toggleSwitch = document.querySelector('.toggle-switch');
+    
+    // 立即更新视觉状态
+    if (isAllowed) {
+        toggleSwitch.classList.add('active');
+    } else {
+        toggleSwitch.classList.remove('active');
+    }
     
     try {
         const response = await fetch('/api/system/settings', {
@@ -2774,10 +2936,20 @@ async function handleRegistrationToggle(event) {
             console.error('Failed to update registration setting:', response.statusText);
             // 恢复开关状态
             event.target.checked = !isAllowed;
+            if (!isAllowed) {
+                toggleSwitch.classList.add('active');
+            } else {
+                toggleSwitch.classList.remove('active');
+            }
         }
     } catch (error) {
         console.error('Error updating registration setting:', error);
         // 恢复开关状态
         event.target.checked = !isAllowed;
+        if (!isAllowed) {
+            toggleSwitch.classList.add('active');
+        } else {
+            toggleSwitch.classList.remove('active');
+        }
     }
 }

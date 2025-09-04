@@ -120,11 +120,11 @@ func createTaskWithFiles(c *gin.Context, db *gorm.DB) {
 		}
 
 		// 处理每个上传的图片
-		for _, fileHeader := range form.File["images"] {
-			// 生成基于时间戳的唯一文件名（YYYYMMDDHHMMSS格式）
+		for i, fileHeader := range form.File["images"] {
+			// 生成基于时间戳和索引的唯一文件名（YYYYMMDDHHMMSS_index格式）
 			timestamp := time.Now().Format("20060102150405") // 使用YYYYMMDDHHMMSS格式
 			ext := filepath.Ext(fileHeader.Filename) // 获取原文件扩展名
-			filename := fmt.Sprintf("%s%s", timestamp, ext) // 时间格式文件名
+			filename := fmt.Sprintf("%s_%d%s", timestamp, i+1, ext) // 时间格式文件名加索引
 			filePath := filepath.Join(imageDir, filename)
 
 			// 打开上传的文件
@@ -231,18 +231,73 @@ func UpdateTask(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		var input map[string]interface{}
-		if err := c.ShouldBindJSON(&input); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		// 只允许更新部分字段，新增images字段支持
-		allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true, "favorite": true, "images": true}
+		// 检查请求类型，支持 FormData 和 JSON 两种格式
+		contentType := c.GetHeader("Content-Type")
 		updateFields := make(map[string]interface{})
-		for k, v := range input {
-			if allowed[k] {
-				updateFields[k] = v
+		allowed := map[string]bool{"content": true, "tags": true, "completed": true, "pinned": true, "remark": true, "favorite": true, "images": true}
+
+		if strings.Contains(contentType, "multipart/form-data") {
+			// 处理 FormData 格式（包含文件上传）
+			content := c.PostForm("content")
+			existingImages := c.PostForm("images")
+			
+			// 处理新增图片文件
+			form, err := c.MultipartForm()
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "解析表单失败"})
+				return
+			}
+
+			var newImagePaths []string
+			if files := form.File["newImages"]; len(files) > 0 {
+				// 确保上传目录存在
+				uploadDir := "web/static/images/tasks"
+				if err := os.MkdirAll(uploadDir, 0755); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "创建上传目录失败"})
+					return
+				}
+
+				for _, fileHeader := range files {
+					// 生成唯一文件名
+					ext := filepath.Ext(fileHeader.Filename)
+					filename := fmt.Sprintf("%d_%s%s", time.Now().UnixNano(), strings.ReplaceAll(fileHeader.Filename, ext, ""), ext)
+					filePath := filepath.Join(uploadDir, filename)
+
+					// 保存文件
+					if err := c.SaveUploadedFile(fileHeader, filePath); err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "保存文件失败"})
+						return
+					}
+
+					// 保存相对路径用于数据库存储
+					relativePath := "/static/images/tasks/" + filename
+					newImagePaths = append(newImagePaths, relativePath)
+				}
+			}
+
+			// 合并现有图片和新增图片
+			allImages := []string{}
+			if existingImages != "" {
+				allImages = append(allImages, strings.Split(existingImages, ",")...)
+			}
+			allImages = append(allImages, newImagePaths...)
+
+			// 设置更新字段
+			updateFields["content"] = content
+			updateFields["images"] = strings.Join(allImages, ",")
+		} else {
+			// 处理 JSON 格式
+			var input map[string]interface{}
+			if err := c.ShouldBindJSON(&input); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// 只允许更新部分字段
+			for k, v := range input {
+				if allowed[k] {
+					updateFields[k] = v
+				}
 			}
 		}
 
