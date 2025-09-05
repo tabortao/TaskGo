@@ -1604,10 +1604,10 @@ function editTaskContent(span, id) {
         taskItemContainer.style.width = '100%';
     }
     
-    // 创建编辑容器 - 设置宽度为任务列表的80%
+    // 创建编辑容器 - 设置宽度与任务列表宽度一致
     const editContainer = document.createElement('div');
     editContainer.className = 'max-w-none';
-    editContainer.style.width = '80%'; // 设置宽度为任务列表的80%
+    editContainer.style.width = '100%'; // 设置宽度与任务列表宽度一致
     editContainer.style.minWidth = '300px'; // 设置最小宽度确保编辑区域足够宽
     
     // 创建textarea替代input - 设置为容器内100%宽度
@@ -1616,7 +1616,7 @@ function editTaskContent(span, id) {
     textarea.className = 'w-full px-3 py-2 bg-background border border-border rounded resize-none overflow-hidden focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary min-h-[100px] mb-2';
     textarea.style.height = 'auto'; // 重置高度
     textarea.style.minHeight = '100px'; // 增加最小高度到100px，提供更好的编辑体验
-    textarea.style.width = '100%'; // 在80%宽度的容器内占满宽度
+    textarea.style.width = '100%'; // 在容器内占满宽度
     textarea.style.minWidth = '280px'; // 设置最小宽度
     
     editContainer.appendChild(textarea);
@@ -1675,6 +1675,9 @@ function editTaskContent(span, id) {
     imageInput.multiple = true;
     imageInput.className = 'hidden';
     imageInput.id = `edit-image-input-${id}`;
+    imageInput.style.position = 'absolute';
+    imageInput.style.left = '-9999px'; // 确保完全隐藏但仍可访问
+    console.log('文件输入元素已创建，ID:', imageInput.id); // 调试信息
     
     // 创建添加图片按钮（小图标）
     const addImageBtn = document.createElement('button');
@@ -1691,16 +1694,22 @@ function editTaskContent(span, id) {
     addImageBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        console.log('添加图片按钮被点击'); // 调试信息
         // 设置标志，防止blur事件触发保存
         textarea.dataset.selectingImage = 'true';
         // 确保文件输入元素可用并触发点击
-        setTimeout(() => {
+        try {
             imageInput.click();
-        }, 0);
+            console.log('文件选择器已触发'); // 调试信息
+        } catch (error) {
+            console.error('触发文件选择器失败:', error);
+            textarea.dataset.selectingImage = 'false';
+        }
     });
     
     // 处理文件选择
     imageInput.addEventListener('change', (e) => {
+        console.log('文件选择事件触发，选择的文件数量:', e.target.files ? e.target.files.length : 0); // 调试信息
         // 清除选择图片标志
         textarea.dataset.selectingImage = 'false';
         // 重新聚焦到textarea
@@ -1708,6 +1717,7 @@ function editTaskContent(span, id) {
         
         const files = e.target.files;
         if (files && files.length > 0) {
+            console.log('开始处理选择的文件'); // 调试信息
             // 创建或获取图片容器
             let editImagesContainer = editContainer.querySelector('.flex.flex-wrap.gap-2.mb-2');
             if (!editImagesContainer) {
@@ -1717,13 +1727,16 @@ function editTaskContent(span, id) {
             }
             
             // 处理每个选中的文件
-            Array.from(files).forEach((file) => {
+            Array.from(files).forEach((file, index) => {
+                console.log(`处理文件 ${index + 1}:`, file.name, file.type, file.size); // 调试信息
                 if (file.type.startsWith('image/')) {
                     const reader = new FileReader();
                     reader.onload = (e) => {
+                        console.log('文件读取完成:', file.name); // 调试信息
                         // 生成临时的图片路径（使用data URL）
                         const tempImagePath = e.target.result;
                         editableImages.push(tempImagePath);
+                        console.log('图片已添加到editableImages，当前数量:', editableImages.length); // 调试信息
                         
                         // 创建图片预览
                         const imageWrapper = document.createElement('div');
@@ -1752,8 +1765,14 @@ function editTaskContent(span, id) {
                         imageWrapper.appendChild(img);
                         imageWrapper.appendChild(deleteBtn);
                         editImagesContainer.appendChild(imageWrapper);
+                        console.log('图片预览已添加到DOM'); // 调试信息
+                    };
+                    reader.onerror = (error) => {
+                        console.error('文件读取失败:', error);
                     };
                     reader.readAsDataURL(file);
+                } else {
+                    console.warn('跳过非图片文件:', file.name, file.type); // 调试信息
                 }
             });
         }
@@ -2534,25 +2553,11 @@ async function deleteComment(taskId, commentId) {
         
         if (response.ok) {
             console.log('Comment deleted successfully');
-            // 更新评论列表
+            // 重新加载评论列表
             loadComments(taskId);
             
-            // 更新任务列表以更新评论计数
+            // 重新加载任务列表以更新评论计数 - 这会自动更新所有任务的评论数量显示
             await loadTasks();
-            
-            // 更新评论数量显示
-            const commentCountElement = document.querySelector(`li[data-id="${taskId}"] .absolute`);
-            if (commentCountElement) {
-                // 获取当前任务的评论数
-                const task = allTasks.find(t => t.ID === parseInt(taskId));
-                if (task && task.comment_count > 0) {
-                    // 如果还有评论，更新数量
-                    commentCountElement.textContent = task.comment_count;
-                } else {
-                    // 如果没有评论了，移除评论数量标记
-                    commentCountElement.remove();
-                }
-            }
         } else {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
             console.error('Failed to delete comment:', response.status, errorData);
