@@ -2393,10 +2393,142 @@ function selectTag(tag, input, hashPosition) {
     input.focus();
 }
 
+// PWA Service Worker 注册和管理
 if ('serviceWorker' in navigator) {
+    let deferredPrompt;
+    let swRegistration = null;
+
+    // 监听 beforeinstallprompt 事件
+    window.addEventListener('beforeinstallprompt', (e) => {
+        // 阻止默认的安装提示
+        e.preventDefault();
+        deferredPrompt = e;
+        
+        // 显示自定义安装按钮
+        showInstallPrompt();
+    });
+
+    // 监听应用安装事件
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA 已安装');
+        hideInstallPrompt();
+        showToast('应用已成功安装到设备！', 'success');
+    });
+
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
-            .then(registration => console.log('ServiceWorker registration successful with scope: ', registration.scope))
+            .then(registration => {
+                console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                swRegistration = registration;
+                
+                // 检查更新
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            showUpdatePrompt();
+                        }
+                    });
+                });
+            })
             .catch(err => console.log('ServiceWorker registration failed: ', err));
+
+        // 监听来自 service worker 的消息
+        navigator.serviceWorker.addEventListener('message', event => {
+            if (event.data && event.data.type === 'SKIP_WAITING') {
+                window.location.reload();
+            }
+        });
     });
+
+    // 显示安装提示
+    function showInstallPrompt() {
+        const installPrompt = document.createElement('div');
+        installPrompt.id = 'pwa-install-prompt';
+        installPrompt.className = 'fixed bottom-4 left-4 right-4 bg-blue-600 text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between';
+        installPrompt.innerHTML = `
+            <div class="flex items-center">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                </svg>
+                <span>将 TaskGo 安装到您的设备</span>
+            </div>
+            <div class="flex space-x-2">
+                <button id="install-btn" class="bg-white text-blue-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100">安装</button>
+                <button id="dismiss-install" class="text-white hover:text-gray-200">×</button>
+            </div>
+        `;
+        
+        document.body.appendChild(installPrompt);
+        
+        // 安装按钮事件
+        document.getElementById('install-btn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('用户接受了安装提示');
+                } else {
+                    console.log('用户拒绝了安装提示');
+                }
+                deferredPrompt = null;
+                hideInstallPrompt();
+            }
+        });
+        
+        // 关闭按钮事件
+        document.getElementById('dismiss-install').addEventListener('click', () => {
+            hideInstallPrompt();
+        });
+    }
+
+    // 隐藏安装提示
+    function hideInstallPrompt() {
+        const prompt = document.getElementById('pwa-install-prompt');
+        if (prompt) {
+            prompt.remove();
+        }
+    }
+
+    // 显示更新提示
+    function showUpdatePrompt() {
+        const updatePrompt = document.createElement('div');
+        updatePrompt.id = 'pwa-update-prompt';
+        updatePrompt.className = 'fixed top-4 left-4 right-4 bg-green-600 text-white p-4 rounded-lg shadow-lg z-50 flex items-center justify-between';
+        updatePrompt.innerHTML = `
+            <div class="flex items-center">
+                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>新版本可用，点击更新</span>
+            </div>
+            <div class="flex space-x-2">
+                <button id="update-btn" class="bg-white text-green-600 px-3 py-1 rounded text-sm font-medium hover:bg-gray-100">更新</button>
+                <button id="dismiss-update" class="text-white hover:text-gray-200">×</button>
+            </div>
+        `;
+        
+        document.body.appendChild(updatePrompt);
+        
+        // 更新按钮事件
+        document.getElementById('update-btn').addEventListener('click', () => {
+            if (swRegistration && swRegistration.waiting) {
+                swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+            hideUpdatePrompt();
+        });
+        
+        // 关闭按钮事件
+        document.getElementById('dismiss-update').addEventListener('click', () => {
+            hideUpdatePrompt();
+        });
+    }
+
+    // 隐藏更新提示
+    function hideUpdatePrompt() {
+        const prompt = document.getElementById('pwa-update-prompt');
+        if (prompt) {
+            prompt.remove();
+        }
+    }
 }
