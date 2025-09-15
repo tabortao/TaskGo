@@ -25,6 +25,9 @@ COPY --from=builder /app/taskgo .
 # Copy the web assets (which includes the static folder)
 COPY --from=builder /app/web ./web
 
+# Create uploads directory for image storage
+RUN mkdir -p ./web/static/uploads
+
 # Expose port 8080
 EXPOSE 8080
 

@@ -25,6 +25,305 @@ function getTagColor(tag) {
 }
 // --- End Tag Color Generation ---
 
+// --- 图片上传功能 ---
+let selectedImages = []; // 存储选中的图片文件
+
+// 初始化图片上传功能
+function initImageUpload() {
+    // 桌面端图片上传
+    const imageUploadBtn = document.getElementById('image-upload-btn');
+    const imageUploadInput = document.getElementById('image-upload-input');
+    const clearImagesBtn = document.getElementById('clear-images-btn');
+
+    // 移动端图片上传
+    const mobileImageUploadBtn = document.getElementById('mobile-image-upload-btn');
+    const mobileImageUploadInput = document.getElementById('mobile-image-upload-input');
+    const mobileClearImagesBtn = document.getElementById('mobile-clear-images-btn');
+
+    // 桌面端事件监听
+    if (imageUploadBtn && imageUploadInput) {
+        imageUploadBtn.addEventListener('click', () => {
+            imageUploadInput.click();
+        });
+
+        imageUploadInput.addEventListener('change', (e) => {
+            handleImageSelection(e.target.files, false);
+        });
+    }
+
+    if (clearImagesBtn) {
+        clearImagesBtn.addEventListener('click', () => {
+            clearSelectedImages(false);
+        });
+    }
+
+    // 移动端事件监听
+    if (mobileImageUploadBtn && mobileImageUploadInput) {
+        mobileImageUploadBtn.addEventListener('click', () => {
+            mobileImageUploadInput.click();
+        });
+
+        mobileImageUploadInput.addEventListener('change', (e) => {
+            handleImageSelection(e.target.files, true);
+        });
+    }
+
+    if (mobileClearImagesBtn) {
+        mobileClearImagesBtn.addEventListener('click', () => {
+            clearSelectedImages(true);
+        });
+    }
+}
+
+// 处理图片选择
+function handleImageSelection(files, isMobile) {
+    const maxFileSize = 5 * 1024 * 1024; // 5MB
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
+    for (let file of files) {
+        // 检查文件大小
+        if (file.size > maxFileSize) {
+            showToast(`图片 ${file.name} 超过5MB限制`, 'error');
+            continue;
+        }
+
+        // 检查文件类型
+        if (!allowedTypes.includes(file.type)) {
+            showToast(`图片 ${file.name} 格式不支持`, 'error');
+            continue;
+        }
+
+        // 检查是否已选择
+        const isDuplicate = selectedImages.some(img => 
+            img.name === file.name && img.size === file.size
+        );
+        if (isDuplicate) {
+            showToast(`图片 ${file.name} 已选择`, 'warning');
+            continue;
+        }
+
+        selectedImages.push(file);
+    }
+
+    // 更新预览
+    updateImagePreview(isMobile);
+}
+
+// 更新图片预览
+function updateImagePreview(isMobile) {
+    const previewContainer = isMobile ? 
+        document.getElementById('mobile-image-preview-container') : 
+        document.getElementById('image-preview-container');
+    const previewList = isMobile ? 
+        document.getElementById('mobile-image-preview-list') : 
+        document.getElementById('image-preview-list');
+
+    if (!previewContainer || !previewList) return;
+
+    // 清空预览列表
+    previewList.innerHTML = '';
+
+    if (selectedImages.length === 0) {
+        previewContainer.classList.add('hidden');
+        return;
+    }
+
+    // 显示预览容器
+    previewContainer.classList.remove('hidden');
+
+    // 为每个图片创建预览元素
+    selectedImages.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'relative group';
+            previewItem.innerHTML = `
+                <div class="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border border-border">
+                    <img src="${e.target.result}" alt="${file.name}" class="w-full h-full object-cover">
+                </div>
+                <button type="button" 
+                        class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100"
+                        onclick="removeSelectedImage(${index}, ${isMobile})"
+                        title="删除图片">
+                    ×
+                </button>
+                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 rounded-b-lg truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                    ${file.name}
+                </div>
+            `;
+            previewList.appendChild(previewItem);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// 删除选中的图片
+function removeSelectedImage(index, isMobile) {
+    selectedImages.splice(index, 1);
+    updateImagePreview(isMobile);
+    
+    // 清空文件输入框
+    const input = isMobile ? 
+        document.getElementById('mobile-image-upload-input') : 
+        document.getElementById('image-upload-input');
+    if (input) {
+        input.value = '';
+    }
+}
+
+// 清除所有选中的图片
+function clearSelectedImages(isMobile) {
+    selectedImages = [];
+    updateImagePreview(isMobile);
+    
+    // 清空文件输入框
+    const input = isMobile ? 
+        document.getElementById('mobile-image-upload-input') : 
+        document.getElementById('image-upload-input');
+    if (input) {
+        input.value = '';
+    }
+}
+
+// 上传图片到服务器
+async function uploadTaskImages(taskId) {
+    if (selectedImages.length === 0) {
+        return { success: true, images: [] };
+    }
+
+    const formData = new FormData();
+    selectedImages.forEach(file => {
+        formData.append('images', file);
+    });
+
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/images`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            // 清除已上传的图片
+            selectedImages = [];
+            updateImagePreview(false); // 桌面端
+            updateImagePreview(true);  // 移动端
+            
+            return { success: true, images: result.images || [] };
+        } else {
+            throw new Error(result.error || '图片上传失败');
+        }
+    } catch (error) {
+        console.error('图片上传错误:', error);
+        showToast(error.message || '图片上传失败', 'error');
+        return { success: false, images: [] };
+    }
+}
+
+// 删除任务图片
+async function deleteTaskImage(taskId, imagePath) {
+    try {
+        const response = await fetch(`/api/tasks/${taskId}/images`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ image_path: imagePath })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            showToast('图片删除成功', 'success');
+            // 重新加载任务列表以更新显示
+            loadTasks();
+            return true;
+        } else {
+            throw new Error(result.error || '图片删除失败');
+        }
+    } catch (error) {
+        console.error('图片删除错误:', error);
+        showToast(error.message || '图片删除失败', 'error');
+        return false;
+    }
+}
+
+// 渲染任务图片
+function renderTaskImages(images, taskId) {
+    if (!images || images.trim() === '') {
+        return '';
+    }
+
+    const imageList = images.split(',').filter(img => img.trim() !== '');
+    if (imageList.length === 0) {
+        return '';
+    }
+
+    return `
+        <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            ${imageList.map(imagePath => `
+                <div class="relative group">
+                    <img src="${imagePath.trim()}" 
+                         alt="任务图片" 
+                         class="w-full h-24 object-cover rounded-lg border border-border cursor-pointer hover:opacity-80 transition-opacity"
+                         onclick="showImageModal('${imagePath.trim()}')"
+                         loading="lazy">
+                    <button type="button" 
+                            class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                            onclick="deleteTaskImage(${taskId}, '${imagePath.trim()}')"
+                            title="删除图片">
+                        ×
+                    </button>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// 显示图片模态框
+function showImageModal(imagePath) {
+    // 创建模态框
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+        <div class="relative w-full h-full flex items-center justify-center">
+            <img src="${imagePath}" 
+                 alt="图片预览" 
+                 class="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl">
+            <button type="button" 
+                    class="absolute top-4 right-4 w-10 h-10 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 transition-colors flex items-center justify-center text-xl"
+                    onclick="this.closest('.fixed').remove()"
+                    title="关闭">
+                ×
+            </button>
+        </div>
+    `;
+    
+    // 点击背景关闭
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.closest('.relative') === modal.querySelector('.relative')) {
+            modal.remove();
+        }
+    });
+    
+    // ESC键关闭
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+    
+    document.body.appendChild(modal);
+}
+// --- End 图片上传功能 ---
+
 // 移动端下拉刷新功能
 function setupPullToRefresh() {
     const mainContent = document.querySelector('main');
@@ -173,6 +472,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if ('ontouchstart' in window) {
         setupPullToRefresh();
     }
+    
+    // 初始化图片上传功能
+    initImageUpload();
     
     const token = localStorage.getItem('token');
     if (token) {
@@ -1240,6 +1542,17 @@ function createTaskElement(task) {
 
     taskContent.appendChild(timestamp);
     taskContent.appendChild(content);
+    
+    // 添加图片显示 - 放在标签上方
+    if (task.images && task.images.trim() !== '') {
+        const imagesHTML = renderTaskImages(task.images, task.ID);
+        if (imagesHTML) {
+            const imagesContainer = document.createElement('div');
+            imagesContainer.innerHTML = imagesHTML;
+            taskContent.appendChild(imagesContainer);
+        }
+    }
+    
     taskContent.appendChild(tagsContainer);
 
     // 操作按钮容器 - 直接显示在右上角
@@ -1326,13 +1639,43 @@ async function handleCreateTask(e) {
     });
 
     if (res.ok) {
+        const taskData = await res.json();
+        console.log('创建任务返回的数据:', taskData); // 调试日志
+        console.log('taskData.data:', taskData.data); // 调试data字段
+        console.log('taskData.data.ID:', taskData.data ? taskData.data.ID : 'data字段不存在'); // 调试ID字段（大写）
+        const taskId = taskData.data.ID; // 从data.ID获取（GORM使用大写ID）
+        
+        // 如果有选中的图片，上传图片
+        if (selectedImages.length > 0) {
+            console.log('Ready to upload images, taskId:', taskId); // 调试日志
+            if (!taskId) {
+                console.error('taskId is empty. Unable to upload image');
+                showToast('Task created successfully, but image upload failed: Task ID retrieval failed', 'warning');
+                return;
+            }
+            const uploadResult = await uploadTaskImages(taskId);
+            if (!uploadResult.success) {
+                showToast('Task created successfully, but image upload failed', 'warning');
+            } else {
+                showToast('Task and picture created successfully', 'success');
+            }
+        } else {
+            showToast('Task created successfully', 'success');
+        }
+        
         input.value = '';
         // 重置输入框高度到默认值
         input.style.height = 'auto';
         input.style.height = '48px'; // 恢复到最小高度
+        
+        // 清除图片选择
+        clearSelectedImages(false); // 桌面端
+        clearSelectedImages(true);  // 移动端
+        
         loadTasks();
     } else {
-        alert('Failed to create task');
+        const errorData = await res.json();
+        showToast(errorData.error || 'Task creation failed', 'error');
     }
 }
 
@@ -1449,20 +1792,28 @@ async function toggleTaskFavorite(id, favorite) {
 }
 
 async function deleteTask(id) {
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    if (!confirm('确定要删除这个任务吗？')) return;
 
     const token = localStorage.getItem('token');
-    const res = await fetch(`/api/tasks/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-    });
+    try {
+        const res = await fetch(`/api/tasks/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
 
-    if (res.ok) {
-        allTasks = allTasks.filter(t => t.ID !== id);
-        renderTags();
-        renderTasks();
-    } else {
-        alert('Failed to delete task');
+        if (res.ok) {
+            const result = await res.json();
+            allTasks = allTasks.filter(t => t.ID !== id);
+            renderTags();
+            renderTasks();
+            showToast(result.message || '任务删除成功', 'success');
+        } else {
+            const error = await res.json();
+            showToast(error.error || '删除任务失败', 'error');
+        }
+    } catch (error) {
+        console.error('删除任务时发生错误:', error);
+        showToast('删除任务时发生网络错误', 'error');
     }
 }
 
@@ -1882,16 +2233,70 @@ function editTaskFromMenu(taskId) {
 // Show toast notification
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-white ${
-        type === 'error' ? 'bg-red-500' : 'bg-green-500'
-    }`;
-    toast.textContent = message;
+    
+    // 根据类型设置不同的样式
+    let bgColor, borderColor, textColor, icon;
+    switch(type) {
+        case 'error':
+            bgColor = 'bg-red-50 dark:bg-red-900/20';
+            borderColor = 'border-red-200 dark:border-red-800';
+            textColor = 'text-red-800 dark:text-red-200';
+            icon = '❌';
+            break;
+        case 'warning':
+            bgColor = 'bg-yellow-50 dark:bg-yellow-900/20';
+            borderColor = 'border-yellow-200 dark:border-yellow-800';
+            textColor = 'text-yellow-800 dark:text-yellow-200';
+            icon = '⚠️';
+            break;
+        case 'success':
+        default:
+            bgColor = 'bg-green-50 dark:bg-green-900/20';
+            borderColor = 'border-green-200 dark:border-green-800';
+            textColor = 'text-green-800 dark:text-green-200';
+            icon = '✅';
+            break;
+    }
+    
+    toast.className = `fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl border-2 ${bgColor} ${borderColor} ${textColor} 
+                      transform transition-all duration-300 ease-in-out animate-pulse max-w-sm`;
+    
+    // 创建内容容器
+    const content = document.createElement('div');
+    content.className = 'flex items-center space-x-3';
+    
+    // 添加图标
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'text-xl flex-shrink-0';
+    iconSpan.textContent = icon;
+    
+    // 添加消息文本
+    const messageSpan = document.createElement('span');
+    messageSpan.className = 'font-medium text-sm leading-relaxed';
+    messageSpan.textContent = message;
+    
+    content.appendChild(iconSpan);
+    content.appendChild(messageSpan);
+    toast.appendChild(content);
     
     document.body.appendChild(toast);
     
-    // Remove toast after 3 seconds
+    // 添加进入动画
     setTimeout(() => {
-        toast.remove();
+        toast.style.transform = 'translateX(0) scale(1)';
+        toast.style.opacity = '1';
+    }, 10);
+    
+    // 3秒后开始退出动画
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%) scale(0.8)';
+        toast.style.opacity = '0';
+        // 动画完成后移除元素
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.remove();
+            }
+        }, 300);
     }, 3000);
 }
 

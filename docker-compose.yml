@@ -10,3 +10,4 @@ services:
     volumes:
       - ./taskgo_data/db:/app/db
       - ./taskgo_data/avatars:/app/web/static/avatars
+      - ./taskgo_data/uploads:/app/web/static/uploads
