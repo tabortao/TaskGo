@@ -239,16 +239,16 @@ async function deleteTaskImage(taskId, imagePath) {
         const result = await response.json();
         
         if (response.ok) {
-            showToast('图片删除成功', 'success');
+            showToast('Picture deleted successfully', 'success');
             // 重新加载任务列表以更新显示
             loadTasks();
             return true;
         } else {
-            throw new Error(result.error || '图片删除失败');
+            throw new Error(result.error || 'Picture deletion failed');
         }
     } catch (error) {
-        console.error('图片删除错误:', error);
-        showToast(error.message || '图片删除失败', 'error');
+        console.error('Picture deletion error:', error);
+        showToast(error.message || 'Picture deletion failed', 'error');
         return false;
     }
 }
@@ -267,14 +267,17 @@ function renderTaskImages(images, taskId) {
     return `
         <div class="mt-2 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             ${imageList.map(imagePath => `
-                <div class="relative group">
-                    <img src="${imagePath.trim()}" 
-                         alt="任务图片" 
-                         class="w-full h-24 object-cover rounded-lg border border-border cursor-pointer hover:opacity-80 transition-opacity"
-                         onclick="showImageModal('${imagePath.trim()}')"
-                         loading="lazy">
+                <div class="relative group bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden border border-border">
+                    <div class="aspect-square w-full flex items-center justify-center p-1">
+                        <img src="${imagePath.trim()}" 
+                             alt="任务图片" 
+                             class="max-w-full max-h-full object-contain rounded cursor-pointer hover:opacity-80 transition-opacity"
+                             onclick="showImageModal('${imagePath.trim()}')"
+                             loading="lazy"
+                             style="width: auto; height: auto;">
+                    </div>
                     <button type="button" 
-                            class="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 flex items-center justify-center"
+                            class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors opacity-0 group-hover:opacity-100 flex items-center justify-center shadow-lg"
                             onclick="deleteTaskImage(${taskId}, '${imagePath.trim()}')"
                             title="删除图片">
                         ×
