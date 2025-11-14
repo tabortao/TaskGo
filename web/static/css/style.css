@@ -471,3 +471,9 @@ h1 {
     margin-right: 0.5rem;
     font-size: 0.75rem;
 }
+
+@supports (height: 100dvh) {
+    .h-screen { height: 100dvh; }
+    .min-h-screen { min-height: 100dvh; }
+}
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }

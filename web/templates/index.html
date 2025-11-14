@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>TaskGo</title>
     
     <!-- PWA 配置 -->
@@ -28,7 +28,7 @@
 </head>
 <body class="bg-background text-gray-800 antialiased">
     <!-- 登录/注册界面 -->
-    <div id="auth-container" class="min-h-screen flex items-center justify-center bg-background p-4">
+    <div id="auth-container" class="min-h-[100dvh] flex items-center justify-center bg-background p-4">
         <div class="w-full max-w-sm">
             <!-- 登录表单 -->
             <div id="login-view" class="bg-surface p-8 rounded-lg shadow-sm border border-border">
@@ -89,7 +89,7 @@
     </div>
 
     <!-- 主应用界面 -->
-    <div id="app-container" class="hidden h-screen">
+    <div id="app-container" class="hidden min-h-[100dvh]">
         <!-- 移动端导航栏 -->
         <nav class="lg:hidden fixed top-0 left-0 right-0 bg-surface border-b border-border z-30">
             <div class="flex items-center justify-between p-4">
@@ -198,7 +198,7 @@
         </aside>
 
         <!-- 主内容区 -->
-        <div class="flex min-h-screen w-full justify-center">
+        <div class="flex min-h-[100dvh] w-full justify-center">
             <div class="flex-1 flex flex-col bg-background transition-[margin] duration-300 sidebar-adjusted w-full" data-expanded-margin="" data-collapsed-margin="">
                 <!-- 桌面端顶部栏 -->
                 <header class="hidden lg:block bg-surface border-b border-border p-4">
@@ -258,7 +258,7 @@
                     </form>
                     
                     <!-- 移动端任务输入框（固定在底部） -->
-                    <form id="mobile-task-form" class="fixed bottom-0 left-0 right-0 p-3 bg-surface border-t border-border shadow-lg lg:hidden z-30">
+                    <form id="mobile-task-form" class="fixed bottom-0 left-0 right-0 p-3 bg-surface border-t border-border shadow-lg lg:hidden z-30 safe-bottom">
                         <div class="relative max-w-screen-xl mx-auto">
                             <textarea id="mobile-task-input" placeholder="#tag1 #tag2 New task..." 
                                    class="w-full px-4 py-3 bg-background border-2 border-border rounded-lg resize-none overflow-hidden min-h-[48px] max-h-[200px]
@@ -292,7 +292,7 @@
                     </form>
 
                     <!-- 任务列表 -->
-                    <div id="tasks-container" class="space-y-6 min-h-[calc(100vh-13rem)] flex-1">
+                    <div id="tasks-container" class="space-y-6 min-h-[calc(100dvh-13rem)] flex-1">
                         <!-- 合并的任务列表 -->
                         <section id="tasks-section" class="bg-surface rounded-xl shadow-sm border border-border/50 overflow-hidden flex-1 min-h-[20rem]">
                             <!-- 待办任务标题 -->
