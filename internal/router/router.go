@@ -9,15 +9,20 @@ import (
 )
 
 func SetupRouter(db *gorm.DB) *gin.Engine {
-	r := gin.Default()
-	r.SetTrustedProxies(nil) //取消Gin框架关于信任所有代理的警告信息
+    r := gin.Default()
+    r.SetTrustedProxies(nil) //取消Gin框架关于信任所有代理的警告信息
 
-	r.Static("/static", "./web/static")
-	r.LoadHTMLGlob("web/templates/*")
+    r.Static("/static", "./web/static")
+    r.LoadHTMLGlob("web/templates/*")
 
-	r.GET("/", func(c *gin.Context) {
-		c.HTML(200, "index.html", nil)
-	})
+    r.GET("/", func(c *gin.Context) {
+        c.HTML(200, "index.html", nil)
+    })
+
+    // 设置页面路由：返回独立的 settings.html
+    r.GET("/settings", func(c *gin.Context) {
+        c.HTML(200, "settings.html", nil)
+    })
 
 	api := r.Group("/api")
 	{

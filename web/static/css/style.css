@@ -477,3 +477,29 @@ h1 {
     .min-h-screen { min-height: 100dvh; }
 }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+/* Tags 折叠/展开动画与滚动条样式 */
+.collapsible {
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+    overflow: hidden;
+}
+.collapsible.collapsed {
+    max-height: 0;
+    opacity: 0;
+    padding: 0;
+    margin: 0;
+    border: none;
+}
+
+/* 滚动条样式（与主题色一致） */
+.tag-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f8fafc;
+}
+.dark .tag-scroll {
+    scrollbar-color: #334155 #0f172a;
+}
+.tag-scroll::-webkit-scrollbar { width: 8px; }
+.tag-scroll::-webkit-scrollbar-track { background: rgba(226, 232, 240, 0.6); border-radius: 8px; }
+.tag-scroll::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.8); border-radius: 8px; }
+.dark .tag-scroll::-webkit-scrollbar-track { background: #1e293b; }
+.dark .tag-scroll::-webkit-scrollbar-thumb { background: #334155; }

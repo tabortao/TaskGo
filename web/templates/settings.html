@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>TaskGo · Settings</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/tailwind_config.js"></script>
+    <link rel="stylesheet" href="/static/css/theme.css">
+</head>
+<body class="bg-background dark:bg-background-dark text-gray-800 dark:text-secondary-200 antialiased min-h-[100dvh]">
+    <header class="bg-surface dark:bg-surface-dark border-b border-border dark:border-border-dark p-4">
+        <div class="flex items-center justify-between w-full max-w-screen-xl mx-auto">
+            <div class="flex items-center space-x-2">
+                <button id="settings-back-btn" class="p-2 rounded-lg border border-border dark:border-border-dark text-secondary hover:text-primary transition-colors" aria-label="返回主页" title="返回">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h1 class="text-xl font-semibold">Settings</h1>
+            </div>
+        </div>
+    </header>
+
+    <main class="w-full max-w-screen-xl mx-auto p-4">
+        <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-sm font-medium text-secondary mb-3">Theme Skin</h2>
+            <div class="space-y-2">
+                <label class="flex items-center space-x-2">
+                    <input type="radio" id="theme-light" name="theme-mode" value="light" class="w-4 h-4 text-primary focus:ring-primary">
+                    <span class="text-sm">Light</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                    <input type="radio" id="theme-dark" name="theme-mode" value="dark" class="w-4 h-4 text-primary focus:ring-primary">
+                    <span class="text-sm">Dark</span>
+                </label>
+                <label class="flex items-center space-x-2">
+                    <input type="radio" id="theme-system" name="theme-mode" value="system" class="w-4 h-4 text-primary focus:ring-primary">
+                    <span class="text-sm">System</span>
+                </label>
+            </div>
+        </section>
+
+        <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-sm font-medium text-secondary mb-3">Profile Settings</h2>
+            <form id="avatar-form" class="space-y-4">
+                <div class="flex items-center space-x-4">
+                    <img id="current-avatar" src="/static/icons/avatar.png" alt="当前头像" class="w-16 h-16 rounded-full border border-border dark:border-border-dark">
+                    <div>
+                        <input type="file" id="avatar-input" accept="image/*" class="hidden">
+                        <button type="button" id="choose-avatar-btn" class="px-4 py-2 text-sm bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">选择图片</button>
+                    </div>
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary/90">Upload avatar</button>
+            </form>
+        </section>
+
+        <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-sm font-medium text-secondary mb-3">Change Password</h2>
+            <form id="password-form" class="space-y-4">
+                <input type="password" id="current-password" placeholder="当前密码" required class="w-full px-4 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <input type="password" id="new-password" placeholder="新密码" required class="w-full px-4 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary/90">Update Password</button>
+            </form>
+        </section>
+
+        <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6">
+            <button id="settings-save-btn" class="w-full bg-background dark:bg-background-dark border border-border dark:border-border-dark text-secondary py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">保存设置</button>
+        </section>
+    </main>
+
+    <script>
+    // 主题应用与系统偏好
+    let currentTheme = localStorage.getItem('theme-mode') || 'system';
+    function applyTheme(theme) {
+        localStorage.setItem('theme-mode', theme);
+        currentTheme = theme;
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else if (theme === 'light') {
+            document.documentElement.classList.remove('dark');
+        } else if (theme === 'system') {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+    }
+    if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (currentTheme === 'system') {
+                if (e.matches) {
+                    document.documentElement.classList.add('dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                }
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        applyTheme(currentTheme);
+        const radio = document.querySelector(`input[name="theme-mode"][value="${currentTheme}"]`);
+        if (radio) radio.checked = true;
+        document.querySelectorAll('input[name="theme-mode"]').forEach(r => {
+            r.addEventListener('change', e => { if (e.target.checked) applyTheme(e.target.value); });
+        });
+
+        // 返回主页
+        document.getElementById('settings-back-btn').addEventListener('click', () => {
+            window.location.href = '/';
+        });
+
+        // 头像上传
+        document.getElementById('choose-avatar-btn').addEventListener('click', () => {
+            document.getElementById('avatar-input').click();
+        });
+        document.getElementById('avatar-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = document.getElementById('avatar-input').files[0];
+            if (!file) { alert('Please select a picture'); return; }
+            if (file.size > 1 * 1024 * 1024) { alert('Image size must be less than 1MB'); return; }
+            const formData = new FormData(); formData.append('avatar', file);
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/user/avatar', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+            if (res.ok) { const { data } = await res.json(); document.getElementById('current-avatar').src = data.avatar_url; alert('头像更新成功'); }
+            else { const { error } = await res.json(); alert(`Error: ${error}`); }
+        });
+
+        // 密码更新
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/user/password', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) });
+            if (res.ok) { alert('Password updated successfully'); document.getElementById('password-form').reset(); }
+            else { const { error } = await res.json(); alert(`错误: ${error}`); }
+        });
+
+        // 保存设置（当前仅保存主题选项）
+        document.getElementById('settings-save-btn').addEventListener('click', () => {
+            alert('Settings have been saved');
+        });
+    });
+    </script>
+</body>
+</html>

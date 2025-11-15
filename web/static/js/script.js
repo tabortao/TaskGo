@@ -440,6 +440,37 @@ function applyTheme(theme) {
     }
 }
 
+// 更新页眉/移动端切换按钮的图标与ARIA状态（中文注释）
+function updateThemeToggleUI(theme) {
+    const btn = document.getElementById('theme-toggle-btn');
+    const icon = document.getElementById('theme-toggle-icon');
+    const mBtn = document.getElementById('mobile-theme-toggle-btn');
+    const mIcon = document.getElementById('mobile-theme-icon');
+    const setIcon = (el) => {
+        if (!el) return;
+        if (theme === 'dark') {
+            el.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />';
+        } else if (theme === 'light') {
+            el.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" />';
+        } else {
+            el.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m7-5a7 7 0 100 14 7 7 0 000-14z" />';
+        }
+    };
+    setIcon(icon);
+    setIcon(mIcon);
+    if (btn) btn.setAttribute('aria-pressed', String(theme === 'dark'));
+    if (mBtn) mBtn.setAttribute('aria-pressed', String(theme === 'dark'));
+}
+
+// 循环切换主题：light -> dark -> system
+function cycleTheme() {
+    const order = ['light', 'dark', 'system'];
+    const idx = order.indexOf(currentTheme);
+    const next = order[(idx + 1) % order.length];
+    applyTheme(next);
+    updateThemeToggleUI(next);
+}
+
 // 监听系统主题变化
 if (window.matchMedia) {
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
@@ -456,6 +487,7 @@ if (window.matchMedia) {
 document.addEventListener('DOMContentLoaded', () => {
     // 应用保存的主题设置
     applyTheme(currentTheme);
+    updateThemeToggleUI(currentTheme);
     
     // 检查是否有保存的用户名
     const savedUsername = localStorage.getItem('saved_username');
@@ -507,7 +539,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // User profile interactions
     document.getElementById('user-profile').addEventListener('click', () => {
         const menu = document.getElementById('user-menu');
-        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        if (menu) {
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        } else {
+            logEvent('error', { message: 'user menu not found', source: 'user-profile toggle' });
+        }
     });
 
     // Settings Modal
@@ -516,20 +552,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = settingsModal.querySelector('.close-btn');
 
     settingsBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        settingsModal.style.display = 'flex';
-        
-        // 设置当前主题选项
-        document.querySelector(`input[name="theme-mode"][value="${currentTheme}"]`).checked = true;
+        // 跳转到独立设置页面
+        window.location.href = '/settings';
     });
 
     closeBtn.addEventListener('click', () => {
         settingsModal.style.display = 'none';
+        logEvent('nav', { to: 'main', via: 'close' });
     });
 
     window.addEventListener('click', (e) => {
         if (e.target == settingsModal) {
             settingsModal.style.display = 'none';
+            logEvent('nav', { to: 'main', via: 'overlay' });
         }
     });
 
@@ -541,9 +576,46 @@ document.addEventListener('DOMContentLoaded', () => {
         radio.addEventListener('change', (e) => {
             if (e.target.checked) {
                 applyTheme(e.target.value);
+                updateThemeToggleUI(e.target.value);
             }
         });
     });
+
+    // 页眉与移动端暗亮切换按钮（中文注释）
+    const headerToggle = document.getElementById('theme-toggle-btn');
+    const mobileToggle = document.getElementById('mobile-theme-toggle-btn');
+    if (headerToggle) {
+        headerToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            cycleTheme();
+        });
+    }
+    if (mobileToggle) {
+        mobileToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            cycleTheme();
+        });
+    }
+
+    // Tags 折叠/展开逻辑与日志记录
+    const tagsContent = document.getElementById('tags-content');
+    const toggleTagsBtn = document.getElementById('toggle-tags-btn');
+    const defaultCollapsed = localStorage.getItem('tagsCollapsed') === 'true';
+    if (tagsContent) {
+        tagsContent.classList.add('collapsible');
+        if (defaultCollapsed) {
+            tagsContent.classList.add('collapsed');
+            if (toggleTagsBtn) toggleTagsBtn.setAttribute('aria-expanded', 'false');
+        }
+    }
+    if (toggleTagsBtn && tagsContent) {
+        toggleTagsBtn.addEventListener('click', () => {
+            const collapsed = tagsContent.classList.toggle('collapsed');
+            toggleTagsBtn.setAttribute('aria-expanded', String(!collapsed));
+            localStorage.setItem('tagsCollapsed', String(collapsed));
+            logEvent('tags_toggle', { collapsed });
+        });
+    }
 
     // Task form submission for both desktop and mobile
     document.getElementById('task-form').addEventListener('submit', handleCreateTask);
@@ -703,6 +775,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebar.style.transform = 'translateX(0)';
         sidebarOverlay.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
+        mobileSidebarToggleBtn.setAttribute('aria-expanded', 'true');
     });
 
     // 移动端关闭按钮事件
@@ -711,6 +784,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebar.style.transform = 'translateX(-100%)';
         sidebarOverlay.classList.add('hidden');
         document.body.style.overflow = '';
+        mobileSidebarToggleBtn.setAttribute('aria-expanded', 'false');
     });
 
     // 遮罩层点击事件
@@ -719,6 +793,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sidebar.style.transform = 'translateX(-100%)';
         sidebarOverlay.classList.add('hidden');
         document.body.style.overflow = '';
+        mobileSidebarToggleBtn.setAttribute('aria-expanded', 'false');
     });
 
     // --- 任务列表逻辑 ---
@@ -840,6 +915,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
+});
+
+// 统一日志记录（保存到localStorage并输出控制台）
+function logEvent(type, payload = {}) {
+    try {
+        const logs = JSON.parse(localStorage.getItem('taskgo_logs') || '[]');
+        logs.push({ type, payload, ts: new Date().toISOString() });
+        localStorage.setItem('taskgo_logs', JSON.stringify(logs));
+        console.log('[TaskGoLog]', type, payload);
+    } catch (e) {
+        console.warn('logEvent failed:', e);
+    }
+}
+
+// 全局错误捕获
+window.addEventListener('error', (e) => {
+    logEvent('error', { message: e.message, source: e.filename, line: e.lineno, col: e.colno });
+});
+window.addEventListener('unhandledrejection', (e) => {
+    logEvent('error', { message: String(e.reason || 'unhandled rejection') });
 });
 
 function showAuth() {
@@ -2940,3 +3035,22 @@ if ('serviceWorker' in navigator) {
         }
     }
 }
+    // 设置页面返回与保存
+    const settingsBackBtn = document.getElementById('settings-back-btn');
+    const settingsSaveBtn = document.getElementById('settings-save-btn');
+    if (settingsBackBtn) {
+        settingsBackBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+            logEvent('nav', { to: 'main', via: 'back' });
+        });
+    }
+    if (settingsSaveBtn) {
+        settingsSaveBtn.addEventListener('click', () => {
+            const selectedTheme = document.querySelector('input[name="theme-mode"]:checked');
+            if (selectedTheme) {
+                applyTheme(selectedTheme.value);
+            }
+            showToast('Settings saved', 'success');
+            logEvent('settings_save', { theme: selectedTheme ? selectedTheme.value : null });
+        });
+    }
