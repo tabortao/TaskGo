@@ -549,17 +549,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings Modal
     const settingsModal = document.getElementById('settings-modal');
     const settingsBtn = document.getElementById('settings-btn');
-    const closeBtn = settingsModal.querySelector('.close-btn');
+    const closeBtn = settingsModal ? settingsModal.querySelector('.close-btn') : null;
 
-    settingsBtn.addEventListener('click', (e) => {
-        // 跳转到独立设置页面
-        window.location.href = '/settings';
-    });
-
-    closeBtn.addEventListener('click', () => {
-        settingsModal.style.display = 'none';
-        logEvent('nav', { to: 'main', via: 'close' });
-    });
+    if (closeBtn && settingsModal) {
+        closeBtn.addEventListener('click', () => {
+            settingsModal.style.display = 'none';
+            logEvent('nav', { to: 'main', via: 'close' });
+        });
+    }
 
     window.addEventListener('click', (e) => {
         if (e.target == settingsModal) {

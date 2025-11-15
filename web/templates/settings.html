@@ -52,7 +52,7 @@
                     <img id="current-avatar" src="/static/icons/avatar.png" alt="当前头像" class="w-16 h-16 rounded-full border border-border dark:border-border-dark">
                     <div>
                         <input type="file" id="avatar-input" accept="image/*" class="hidden">
-                        <button type="button" id="choose-avatar-btn" class="px-4 py-2 text-sm bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">选择图片</button>
+                        <button type="button" id="choose-avatar-btn" class="px-4 py-2 text-sm bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">Select Picture</button>
                     </div>
                 </div>
                 <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary/90">Upload avatar</button>
@@ -62,14 +62,14 @@
         <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6 mb-6">
             <h2 class="text-sm font-medium text-secondary mb-3">Change Password</h2>
             <form id="password-form" class="space-y-4">
-                <input type="password" id="current-password" placeholder="当前密码" required class="w-full px-4 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
-                <input type="password" id="new-password" placeholder="新密码" required class="w-full px-4 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <input type="password" id="current-password" placeholder="Current Password" required class="w-full px-4 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
+                <input type="password" id="new-password" placeholder="New Password" required class="w-full px-4 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary">
                 <button type="submit" class="w-full bg-primary text-white py-2 rounded-lg hover:bg-primary/90">Update Password</button>
             </form>
         </section>
 
         <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6">
-            <button id="settings-save-btn" class="w-full bg-background dark:bg-background-dark border border-border dark:border-border-dark text-secondary py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">保存设置</button>
+            <button id="settings-save-btn" class="w-full bg-background dark:bg-background-dark border border-border dark:border-border-dark text-secondary py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">Save Settings</button>
         </section>
     </main>
 
@@ -140,7 +140,7 @@
             const token = localStorage.getItem('token');
             const res = await fetch('/api/user/password', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) });
             if (res.ok) { alert('Password updated successfully'); document.getElementById('password-form').reset(); }
-            else { const { error } = await res.json(); alert(`错误: ${error}`); }
+            else { const { error } = await res.json(); alert(`Error: ${error}`); }
         });
 
         // 保存设置（当前仅保存主题选项）
