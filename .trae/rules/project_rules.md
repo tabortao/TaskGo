@@ -25,6 +25,7 @@ This file provides guidance to Trae (trae.ai) when working with code in this rep
    - 遵循单一职责原则
 8. 项目使用tailwindcss框架，前端代码需符合tailwindcss规范。
 9. 新功能开发时，先判断是否需要后端API修改，如果需要先创建后端API及相关代码，再优化前端html及js代码，确保html、js中使用的属性、方法与api统一。
+10. 页面都采用英文。
 
 
 ## 项目版本及依赖

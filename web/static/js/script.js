@@ -215,11 +215,11 @@ async function uploadTaskImages(taskId) {
             
             return { success: true, images: result.images || [] };
         } else {
-            throw new Error(result.error || '图片上传失败');
+            throw new Error(result.error || 'Image upload failed');
         }
     } catch (error) {
-        console.error('图片上传错误:', error);
-        showToast(error.message || '图片上传失败', 'error');
+        console.error('Image upload error:', error);
+        showToast(error.message || 'Image upload failed', 'error');
         return { success: false, images: [] };
     }
 }
@@ -270,7 +270,7 @@ function renderTaskImages(images, taskId) {
                 <div class="relative group bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden border border-border">
                     <div class="aspect-square w-full flex items-center justify-center p-1">
                         <img src="${imagePath.trim()}" 
-                             alt="任务图片" 
+                             alt="Mission pictures" 
                              class="max-w-full max-h-full object-contain rounded cursor-pointer hover:opacity-80 transition-opacity"
                              onclick="showImageModal('${imagePath.trim()}')"
                              loading="lazy"
@@ -296,12 +296,12 @@ function showImageModal(imagePath) {
     modal.innerHTML = `
         <div class="relative w-full h-full flex items-center justify-center">
             <img src="${imagePath}" 
-                 alt="图片预览" 
+                 alt="Picture Preview" 
                  class="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl">
             <button type="button" 
                     class="absolute top-4 right-4 w-10 h-10 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 transition-colors flex items-center justify-center text-xl"
                     onclick="this.closest('.fixed').remove()"
-                    title="关闭">
+                    title="Close">
                 ×
             </button>
         </div>
