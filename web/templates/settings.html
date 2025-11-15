@@ -69,7 +69,8 @@
         </section>
 
         <section class="bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6">
-            <button id="settings-save-btn" class="w-full bg-background dark:bg-background-dark border border-border dark:border-border-dark text-secondary py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800">Save Settings</button>
+            <h2 class="text-sm font-medium text-secondary mb-3">About</h2>
+            <div id="version-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
         </section>
     </main>
 
@@ -143,10 +144,29 @@
             else { const { error } = await res.json(); alert(`Error: ${error}`); }
         });
 
-        // 保存设置（当前仅保存主题选项）
-        document.getElementById('settings-save-btn').addEventListener('click', () => {
-            alert('Settings have been saved');
-        });
+        // 版本信息读取与渲染（从 config.json 获取）
+        // 中文注释：在页面底部展示软件版本信息，桌面端每行显示多个，移动端每行显示一个
+        fetch('/static/config.json')
+            .then(res => res.ok ? res.json() : Promise.reject('配置文件加载失败'))
+            .then(cfg => {
+                const items = [
+                    { label: 'Version', value: cfg.version },
+                    { label: 'Build Date', value: cfg.build_date },
+                    { label: 'Commit', value: (cfg.commit || '').slice(0, 7) },
+                    { label: 'App Name', value: cfg.name },
+                ].filter(i => i.value);
+                const grid = document.getElementById('version-grid');
+                grid.innerHTML = items.map(i => `
+                    <div class="border border-border dark:border-border-dark rounded-xl p-4 bg-background dark:bg-background-dark">
+                        <div class="text-xs text-secondary mb-1">${i.label}</div>
+                        <div class="text-sm font-medium">${i.value}</div>
+                    </div>
+                `).join('');
+            })
+            .catch(err => {
+                const grid = document.getElementById('version-grid');
+                grid.innerHTML = `<div class="text-sm text-danger">Failed to load version: ${err}</div>`;
+            });
     });
     </script>
 </body>

@@ -333,7 +333,7 @@ function setupPullToRefresh() {
     let touchStartY = 0;
     let touchEndY = 0;
     let isRefreshing = false;
-    const minPullDistance = 100; // 最小下拉距离
+    const minPullDistance = 200; //下拉刷新阈值
     
     // 创建刷新指示器
     const refreshIndicator = document.createElement('div');
@@ -484,10 +484,10 @@ if (window.matchMedia) {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // 应用保存的主题设置
-    applyTheme(currentTheme);
-    updateThemeToggleUI(currentTheme);
+    document.addEventListener('DOMContentLoaded', () => {
+        // 应用保存的主题设置
+        applyTheme(currentTheme);
+        updateThemeToggleUI(currentTheme);
     
     // 检查是否有保存的用户名
     const savedUsername = localStorage.getItem('saved_username');
@@ -502,11 +502,20 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('remember-password').checked = true;
         }
     }
-    
-    // 移动端下拉刷新功能
-    if ('ontouchstart' in window) {
-        setupPullToRefresh();
-    }
+        const settingsLink = document.getElementById('settings-btn');
+        if (settingsLink) {
+            settingsLink.addEventListener('click', (e) => {
+                if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+                    e.preventDefault();
+                    window.location.assign('/settings');
+                }
+            });
+        }
+
+        // 移动端下拉刷新功能
+        if ('ontouchstart' in window) {
+            setupPullToRefresh();
+        }
     
     // 初始化图片上传功能
     initImageUpload();
@@ -1287,15 +1296,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 删除标签按钮点击事件
     deleteTagBtn.addEventListener('click', async () => {
-        if (confirm('确定要删除这个标签吗？')) {
+        if (confirm('Are you sure you want to delete this tag?')) {
             try {
                 if (!currentTaskId) {
-                    throw new Error('无法找到对应的任务');
+                    throw new Error('Unable to find the corresponding task');
                 }
                 
                 const task = allTasks.find(t => t.ID === currentTaskId);
                 if (!task) {
-                    throw new Error('无法找到对应的任务数据');
+                    throw new Error('Unable to find corresponding task data');
                 }
 
                 // 从当前任务中移除该标签
@@ -1312,7 +1321,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (!currentResponse.ok) {
-                    throw new Error('获取任务数据失败');
+                    throw new Error('Failed to acquire task data');
                 }
 
                 const currentTaskRes = await currentResponse.json();
