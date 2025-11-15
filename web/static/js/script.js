@@ -1126,8 +1126,14 @@ async function loadTasks() {
         const completed = allTasks.filter(t => t.completed).length;
         const totalEl = document.getElementById('total-count');
         const compEl = document.getElementById('completed-count');
-        if (totalEl) totalEl.textContent = String(total);
-        if (compEl) compEl.textContent = String(completed);
+        if (totalEl) {
+            totalEl.textContent = String(total);
+            if (totalEl.parentElement) totalEl.parentElement.title = `总任务数${total}个`;
+        }
+        if (compEl) {
+            compEl.textContent = String(completed);
+            if (compEl.parentElement) compEl.parentElement.title = `已完成任务${completed}个`;
+        }
         renderTags();
         renderTasks();
     } else {
@@ -2257,6 +2263,22 @@ function setupMobileNavigation() {
 document.addEventListener('DOMContentLoaded', () => {
     // ...existing code...
     setupMobileNavigation(); // 设置移动端导航
+
+    // 回到顶部按钮：在主滚动容器滚动时显示/隐藏
+    const mainEl = document.querySelector('main');
+    const toTopBtn = document.getElementById('scroll-to-top-btn');
+    if (mainEl && toTopBtn) {
+        const toggleToTop = () => {
+            const st = mainEl.scrollTop;
+            toTopBtn.classList.toggle('hidden', st < 300);
+        };
+        mainEl.addEventListener('scroll', toggleToTop, { passive: true });
+        toTopBtn.addEventListener('click', () => {
+            mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        toggleToTop();
+    }
+
     // ...existing code...
 });
 
