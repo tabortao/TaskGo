@@ -438,6 +438,7 @@ function applyTheme(theme) {
             document.documentElement.classList.remove('dark');
         }
     }
+    updatePWAThemeColor();
 }
 
 // 更新页眉/移动端切换按钮的图标与ARIA状态（中文注释）
@@ -460,6 +461,47 @@ function updateThemeToggleUI(theme) {
     setIcon(mIcon);
     if (btn) btn.setAttribute('aria-pressed', String(theme === 'dark'));
     if (mBtn) mBtn.setAttribute('aria-pressed', String(theme === 'dark'));
+}
+
+function ensureMetaThemeTag() {
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+        meta = document.createElement('meta');
+        meta.setAttribute('name', 'theme-color');
+        meta.setAttribute('content', '#ffffff');
+        document.head.appendChild(meta);
+    }
+    return meta;
+}
+
+function rgbToHex(rgb) {
+    const m = rgb.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\)/i);
+    if (!m) return '#ffffff';
+    const r = Math.max(0, Math.min(255, parseInt(m[1],10)));
+    const g = Math.max(0, Math.min(255, parseInt(m[2],10)));
+    const b = Math.max(0, Math.min(255, parseInt(m[3],10)));
+    const toHex = (n)=> n.toString(16).padStart(2,'0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function getEffectiveBgColor(el) {
+    let node = el;
+    while (node && node !== document.documentElement) {
+        const cs = getComputedStyle(node);
+        const bg = cs.backgroundColor;
+        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+            return bg;
+        }
+        node = node.parentElement;
+    }
+    return getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)';
+}
+
+function updatePWAThemeColor() {
+    const meta = ensureMetaThemeTag();
+    const probe = document.elementFromPoint(Math.floor(window.innerWidth/2), 1) || document.body;
+    const bg = getEffectiveBgColor(probe);
+    meta.setAttribute('content', rgbToHex(bg));
 }
 
 // 循环切换主题：light -> dark -> system
@@ -2269,14 +2311,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const toTopBtn = document.getElementById('scroll-to-top-btn');
     if (mainEl && toTopBtn) {
         const toggleToTop = () => {
-            const st = mainEl.scrollTop;
-            toTopBtn.classList.toggle('hidden', st < 300);
+            const st = Math.max(mainEl.scrollTop || 0, window.scrollY || 0, document.documentElement.scrollTop || 0);
+            toTopBtn.classList.toggle('hidden', st < 100);
         };
         mainEl.addEventListener('scroll', toggleToTop, { passive: true });
+        window.addEventListener('scroll', toggleToTop, { passive: true });
         toTopBtn.addEventListener('click', () => {
             mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
         toggleToTop();
+
+        let themeTimer = null;
+        const updateThemeThrottled = () => {
+            if (themeTimer) return;
+            themeTimer = setTimeout(() => { themeTimer = null; updatePWAThemeColor(); }, 120);
+        };
+        mainEl.addEventListener('scroll', updateThemeThrottled, { passive: true });
+        window.addEventListener('scroll', updateThemeThrottled, { passive: true });
+        window.addEventListener('resize', updateThemeThrottled, { passive: true });
+        updatePWAThemeColor();
     }
 
     // ...existing code...
