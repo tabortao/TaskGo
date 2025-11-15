@@ -1122,6 +1122,12 @@ async function loadTasks() {
         const { data } = await res.json();
         console.log('API返回的任务数据:', data); // 调试输出
         allTasks = data || [];
+        const total = allTasks.length;
+        const completed = allTasks.filter(t => t.completed).length;
+        const totalEl = document.getElementById('total-count');
+        const compEl = document.getElementById('completed-count');
+        if (totalEl) totalEl.textContent = String(total);
+        if (compEl) compEl.textContent = String(completed);
         renderTags();
         renderTasks();
     } else {
@@ -1137,6 +1143,16 @@ function renderTags() {
 
     // 获取所有任务中的唯一标签
     const tags = [...new Set(allTasks.flatMap(task => task.tags ? task.tags.split(',') : []))];
+    const tagCounts = new Map();
+    allTasks.forEach(task => {
+        if (task.tags) {
+            task.tags.split(',').forEach(t => {
+                const k = t.trim();
+                if (!k) return;
+                tagCounts.set(k, (tagCounts.get(k) || 0) + 1);
+            });
+        }
+    });
     
     tags.forEach(tag => {
         if (!tag) return;
@@ -1161,6 +1177,11 @@ function renderTags() {
         content.appendChild(tagIcon);
         content.appendChild(tagText);
         li.appendChild(content);
+
+        const countEl = document.createElement('span');
+        countEl.className = 'ml-auto text-xs text-secondary';
+        countEl.textContent = String(tagCounts.get(tag) || 0);
+        li.appendChild(countEl);
         
         li.className = `flex items-center px-2 py-1 rounded-md hover:bg-gray-100 cursor-pointer ${currentTagFilter === tag ? 'bg-primary text-white' : ''}`;
         
@@ -1610,7 +1631,17 @@ function createTaskElement(task) {
     content.className = 'break-words whitespace-pre-wrap mb-2';
     const contentText = document.createElement('span');
     contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
-    contentText.textContent = task.content;
+    if (currentSearchQuery && currentSearchQuery.trim()) {
+        const query = currentSearchQuery.trim();
+        const escapeHTML = (s) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const safe = escapeHTML(task.content);
+        const re = new RegExp(escapeRegExp(query), 'gi');
+        const highlighted = safe.replace(re, (m) => `<span class="bg-yellow-200 dark:bg-yellow-600/60 text-gray-900 dark:text-white rounded px-0.5">${m}</span>`);
+        contentText.innerHTML = highlighted;
+    } else {
+        contentText.textContent = task.content;
+    }
     contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
     content.appendChild(contentText);
 
@@ -1921,6 +1952,8 @@ async function deleteTask(id) {
     }
 }
 
+// 编辑任务内容：移动端优化，编辑时滚动至视窗顶部并禁用侧边栏打开
+let isEditingTask = false;
 function editTaskContent(span, id) {
     const currentContent = span.textContent;
     
@@ -1933,6 +1966,19 @@ function editTaskContent(span, id) {
     // 替换原有元素
     span.parentElement.replaceChild(textarea, span);
     textarea.focus();
+
+    // 移动端编辑优化：滚动到顶部并留出输入法空间
+    const taskItem = textarea.closest('li');
+    if (taskItem && 'ontouchstart' in window) {
+        taskItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+            window.scrollBy({ top: -120, behavior: 'smooth' });
+        }, 120);
+    }
+
+    // 设置编辑状态，禁止侧边栏在编辑期间弹出
+    isEditingTask = true;
+    document.body.dataset.editing = 'true';
 
     // 自动调整高度
     function autoResize() {
@@ -1965,7 +2011,11 @@ function editTaskContent(span, id) {
         loadTasks(); // Always reload to ensure data consistency
     };
 
-    textarea.addEventListener('blur', saveChanges);
+    textarea.addEventListener('blur', () => {
+        saveChanges();
+        isEditingTask = false;
+        delete document.body.dataset.editing;
+    });
     
     // 处理键盘事件
     textarea.addEventListener('keydown', (e) => {
@@ -2014,6 +2064,7 @@ function setupMobileNavigation() {
     }
 
     function openSidebar() {
+        if (document.body.dataset.editing === 'true') return;
         sidebar.classList.add('active');
         sidebarOverlay.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -2021,11 +2072,13 @@ function setupMobileNavigation() {
 
     // 移动端手势控制
     function handleTouchStart(e) {
+        if (document.body.dataset.editing === 'true') return;
         touchStartX = e.touches[0].clientX;
         sidebar.style.transition = 'none';
     }
 
     function handleTouchMove(e) {
+        if (document.body.dataset.editing === 'true') return;
         touchMoveX = e.touches[0].clientX;
         const deltaX = touchMoveX - touchStartX;
         
@@ -2046,6 +2099,7 @@ function setupMobileNavigation() {
     }
 
     function handleTouchEnd(e) {
+        if (document.body.dataset.editing === 'true') return;
         const deltaX = touchMoveX - touchStartX;
         sidebar.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         sidebarOverlay.style.transition = 'opacity 0.3s ease-in-out';
@@ -2131,12 +2185,15 @@ function setupMobileNavigation() {
         }
     }
 
-    // 搜索功能同步
+    // 搜索功能同步（防止递归触发导致栈溢出）
+    let isSearchSyncing = false;
     function syncSearchInputs(sourceInput, targetInput) {
+        if (isSearchSyncing) return;
+        isSearchSyncing = true;
         targetInput.value = sourceInput.value;
-        // 触发搜索事件（如果有的话）
-        const event = new Event('input', { bubbles: true });
-        targetInput.dispatchEvent(event);
+        currentSearchQuery = sourceInput.value;
+        renderTasks();
+        isSearchSyncing = false;
     }
 
     if (mobileSearchInput && desktopSearchInput) {

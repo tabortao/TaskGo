@@ -123,7 +123,7 @@
         <div class="sidebar-overlay fixed inset-0 bg-black/50 z-40 hidden lg:hidden"></div>
         
         <!-- 侧边栏 -->
-        <aside id="sidebar" class="fixed lg:sticky top-0 left-0 h-full w-64 bg-surface dark:bg-surface-dark border-r border-border dark:border-border-dark flex flex-col z-50 transform -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out">
+        <aside id="sidebar" class="fixed lg:sticky top-0 left-0 h-[100dvh] w-64 bg-surface dark:bg-surface-dark border-r border-border dark:border-border-dark flex flex-col z-50 transform -translate-x-full lg:translate-x-0 transition-all duration-300 ease-in-out">
             <!-- 折叠按钮 -->
             <button id="sidebar-collapse-btn" class="absolute -right-3 top-4 w-6 h-6 bg-surface border border-border rounded-full text-secondary hover:text-gray-700 focus:outline-none shadow-sm hidden lg:flex items-center justify-center cursor-pointer transform transition-transform hover:scale-110 z-10">
                 <svg class="sidebar-collapse-icon w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -140,6 +140,16 @@
                     </div>
                     <div id="user-info" class="flex-1 sidebar-full">
                         <span id="username-display" class="font-medium"></span>
+                        <div id="user-stats" class="mt-1 flex items-center space-x-3">
+                            <div class="flex items-center space-x-1 text-secondary">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                                <span id="total-count">0</span>
+                            </div>
+                            <div class="flex items-center space-x-1 text-secondary">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                                <span id="completed-count">0</span>
+                            </div>
+                        </div>
                     </div>
                     <button id="desktop-sidebar-toggle" class="lg:hidden text-secondary hover:text-gray-700 focus:outline-none">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,7 +159,7 @@
                 </div>
                 <div id="user-menu" class="hidden absolute top-14 left-4 bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-lg shadow-sm p-2"></div>
                 </div>
-            <div class="flex-1 overflow-y-auto">
+            <div class="flex-1 min-h-0 overflow-y-auto flex flex-col">
                 <!-- 导航部分 -->
                 <div class="p-4 border-b border-border">
                     <ul id="main-nav-list" class="space-y-1 mt-2">
@@ -173,7 +183,7 @@
                 </div>
                 
                 <!-- 标签部分 -->
-                <div class="p-4">
+                <div class="p-4 flex-1 min-h-0 flex flex-col">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-2">
                             <svg class="w-5 h-5 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,8 +204,8 @@
                         </button>
                         </div>
                     </div>
-                    <div id="tags-content" class="mt-2">
-                        <ul id="tag-list" class="space-y-1 tag-scroll max-h-[40vh] overflow-y-auto pr-1"></ul>
+                    <div id="tags-content" class="mt-2 flex-1 min-h-0">
+                        <ul id="tag-list" class="space-y-1 tag-scroll h-full overflow-y-auto pr-1"></ul>
                     </div>
                 </div>
             </div>
