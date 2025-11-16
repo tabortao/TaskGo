@@ -2401,9 +2401,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function closeSidebarInstant() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    if (sidebar) sidebar.classList.remove('active');
+    if (sidebar) {
+        sidebar.classList.remove('active');
+        sidebar.style.transform = 'translateX(-100%)';
+    }
     if (overlay) {
         overlay.classList.remove('active');
+        overlay.classList.add('hidden');
         overlay.style.display = 'none';
         overlay.style.opacity = '0';
     }
