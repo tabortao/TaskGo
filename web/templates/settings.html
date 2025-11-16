@@ -175,6 +175,7 @@
         tokenContainer.innerHTML = `
             <h2 class="text-sm font-medium text-secondary mb-3">API Tokens</h2>
             <div class="flex items-center space-x-2 mb-4">
+                <input id="token-name" class="px-3 py-2 bg-background dark:bg-background-dark border border-border rounded-lg" placeholder="Token name (optional)">
                 <select id="token-duration" class="px-3 py-2 bg-background dark:bg-background-dark border border-border rounded-lg">
                     <option value="1m">1 Month</option>
                     <option value="1d">1 Day</option>
@@ -199,11 +200,12 @@
                 row.className = 'p-3 border border-border rounded-lg bg-background dark:bg-background-dark flex items-center justify-between';
                 const left = document.createElement('div');
                 left.className = 'text-xs break-all';
-                left.textContent = t.Token;
+                const name = (t.Name || '').trim();
+                const exp = new Date(t.ExpiresAt).toLocaleString();
+                const preview = t.Token ? (t.Token.slice(0, 8) + '…' + t.Token.slice(-4)) : '';
+                left.innerHTML = `<div class="font-medium">${name || 'Unnamed token'}</div><div class="text-secondary">Expires: ${exp}</div><div class="mt-1">${preview}</div>`;
                 const right = document.createElement('div');
                 right.className = 'flex items-center space-x-2';
-                const exp = new Date(t.ExpiresAt).toLocaleString();
-                const expEl = document.createElement('span'); expEl.className = 'text-secondary text-xs'; expEl.textContent = exp;
                 const copyBtn = document.createElement('button'); copyBtn.className = 'px-2 py-1 bg-primary text-white rounded text-xs'; copyBtn.textContent = 'Copy';
                 copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(t.Token); });
                 const revokeBtn = document.createElement('button'); revokeBtn.className = 'px-2 py-1 bg-red-500 text-white rounded text-xs'; revokeBtn.textContent = 'Revoke';
@@ -224,6 +226,7 @@
                     const panel = document.createElement('div'); panel.className = 'bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl w-full max-w-xs p-4';
                     panel.innerHTML = `
                         <h3 class="text-sm font-medium mb-3">Select duration</h3>
+                        <input id="upd-name" class="w-full px-3 py-2 bg-background dark:bg-background-dark border border-border rounded-lg mb-3" placeholder="Token name" value="${name}">
                         <select id="upd-duration" class="w-full px-3 py-2 bg-background dark:bg-background-dark border border-border rounded-lg mb-4">
                             <option value="1d">1 Day</option>
                             <option value="1m" selected>1 Month</option>
@@ -240,13 +243,13 @@
                     panel.querySelector('#upd-cancel').addEventListener('click', close);
                     panel.querySelector('#upd-ok').addEventListener('click', async () => {
                         const duration = panel.querySelector('#upd-duration').value;
+                        const name2 = panel.querySelector('#upd-name').value;
                         const token0 = localStorage.getItem('token');
-                        await fetch(`/api/tokens/${t.ID}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token0}` }, body: JSON.stringify({ duration }) });
+                        await fetch(`/api/tokens/${t.ID}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token0}` }, body: JSON.stringify({ duration, name: name2 }) });
                         close();
                         loadTokens();
                     });
                 });
-                right.appendChild(expEl);
                 right.appendChild(copyBtn);
                 right.appendChild(updateBtn);
                 right.appendChild(revokeBtn);
@@ -259,7 +262,8 @@
         document.getElementById('create-token-btn').addEventListener('click', async () => {
             const token = localStorage.getItem('token');
             const duration = document.getElementById('token-duration').value;
-            const res = await fetch('/api/tokens', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ duration }) });
+            const name = document.getElementById('token-name').value;
+            const res = await fetch('/api/tokens', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ duration, name }) });
             if (res.ok) loadTokens();
         });
 

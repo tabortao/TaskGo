@@ -2664,24 +2664,30 @@ function showCommentModal(taskId) {
             input.value = '';
     }
 
-    // 搜索清除按钮
+    // 搜索清除与同步（桌面/移动）
     const desktopInput = document.getElementById('search-input');
     const desktopClear = document.getElementById('search-clear-btn');
     const mobileInput = document.getElementById('mobile-search-input');
     const mobileClear = document.getElementById('mobile-search-clear-btn');
-    const toggleClear = (inp, btn) => { if (inp && btn) btn.classList.toggle('hidden', !inp.value); };
-    const bindClear = (inp, btn, other) => {
+    const toggleClear = (inp, btn) => { if (inp && btn) btn.classList.toggle('hidden', !(inp.value && inp.value.length)); };
+    const updateSearch = (val) => {
+        currentSearchQuery = val || '';
+        if (desktopInput) desktopInput.value = currentSearchQuery;
+        if (mobileInput) mobileInput.value = currentSearchQuery;
+        renderTasks();
+    };
+    const bindClear = (inp, btn) => {
         if (!inp || !btn) return;
-        inp.addEventListener('input', () => { toggleClear(inp, btn); });
+        inp.addEventListener('input', () => { toggleClear(inp, btn); updateSearch(inp.value); });
         btn.addEventListener('click', () => {
             inp.value = '';
             toggleClear(inp, btn);
-            if (other) syncSearchInputs(inp, other);
+            updateSearch('');
         });
         toggleClear(inp, btn);
     };
-    bindClear(desktopInput, desktopClear, document.getElementById('mobile-search-input'));
-    bindClear(mobileInput, mobileClear, document.getElementById('search-input'));
+    bindClear(desktopInput, desktopClear);
+    bindClear(mobileInput, mobileClear);
 });
 
     // 点击外部关闭模态框
