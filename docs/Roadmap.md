@@ -10,4 +10,4 @@
 go build -o taskgo.exe ./cmd/main.go # Build
 .\taskgo.exe # Run the Go application.
 ```
-登录 http://localhost:8080，注册一个测试账号：tabor 123678，就可以体验了。
+登录 http://localhost:8080，注册一个测试账号：tabor 123789，就可以体验了。

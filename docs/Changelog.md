@@ -4,6 +4,12 @@
 
 - 版本信息修改：`web\static\config.json`
 
+## v0.3.2
+
+**Release time:** 2025-11-16
+
+- feat(ui): 优化移动端侧边栏关闭动画和响应式设计
+
 ## v0.3.1
 
 **Release time:** 2025-11-16

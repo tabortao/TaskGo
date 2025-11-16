@@ -127,16 +127,38 @@
         document.getElementById('choose-avatar-btn').addEventListener('click', () => {
             document.getElementById('avatar-input').click();
         });
+        function showDialog(title, message, options) {
+            const mask = document.createElement('div');
+            mask.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4';
+            const panel = document.createElement('div');
+            panel.className = 'bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl w-full max-w-sm p-6';
+            const h = document.createElement('h3'); h.className = 'text-lg font-semibold mb-2'; h.textContent = title || 'Notice';
+            const p = document.createElement('p'); p.className = 'text-sm text-secondary'; p.textContent = message || '';
+            const actions = document.createElement('div'); actions.className = 'mt-6 flex justify-end space-x-3';
+            const okBtn = document.createElement('button'); okBtn.className = 'px-3 py-2 rounded bg-primary text-white hover:bg-primary/90'; okBtn.textContent = (options && options.okText) || 'OK';
+            actions.appendChild(okBtn);
+            if (options && options.cancelText) {
+                const cancelBtn = document.createElement('button'); cancelBtn.className = 'px-3 py-2 rounded border text-secondary hover:bg-background'; cancelBtn.textContent = options.cancelText;
+                actions.insertBefore(cancelBtn, okBtn);
+                cancelBtn.addEventListener('click', () => { if (mask.parentNode) mask.remove(); if (options && typeof options.onCancel === 'function') options.onCancel(); });
+            }
+            panel.appendChild(h); panel.appendChild(p); panel.appendChild(actions);
+            mask.appendChild(panel); document.body.appendChild(mask);
+            okBtn.addEventListener('click', () => { if (mask.parentNode) mask.remove(); if (options && typeof options.onOk === 'function') options.onOk(); });
+        }
+
         document.getElementById('avatar-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const file = document.getElementById('avatar-input').files[0];
-            if (!file) { alert('Please select a picture'); return; }
-            if (file.size > 1 * 1024 * 1024) { alert('Image size must be less than 1MB'); return; }
-            const formData = new FormData(); formData.append('avatar', file);
+            if (!file) { showDialog('Upload Avatar', 'Please select a picture'); return; }
+            if (file.size > 1 * 1024 * 1024) { showDialog('Upload Avatar', 'Image size must be less than 1MB'); return; }
+            const formData = new FormData();
+            const converted = typeof convertImageToWebp === 'function' ? await convertImageToWebp(file) : file;
+            formData.append('avatar', converted);
             const token = localStorage.getItem('token');
             const res = await fetch('/api/user/avatar', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
-            if (res.ok) { const { data } = await res.json(); document.getElementById('current-avatar').src = data.avatar_url; alert('头像更新成功'); }
-            else { const { error } = await res.json(); alert(`Error: ${error}`); }
+            if (res.ok) { const { data } = await res.json(); document.getElementById('current-avatar').src = data.avatar_url; showDialog('Upload Avatar', 'Avatar updated successfully'); }
+            else { const { error } = await res.json(); showDialog('Upload Avatar', `Error: ${error}`); }
         });
 
         // 密码更新
@@ -146,8 +168,8 @@
             const newPassword = document.getElementById('new-password').value;
             const token = localStorage.getItem('token');
             const res = await fetch('/api/user/password', { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }) });
-            if (res.ok) { alert('Password updated successfully'); document.getElementById('password-form').reset(); }
-            else { const { error } = await res.json(); alert(`Error: ${error}`); }
+            if (res.ok) { showDialog('Update Password', 'Password updated successfully'); document.getElementById('password-form').reset(); }
+            else { const { error } = await res.json(); showDialog('Update Password', `Error: ${error}`); }
         });
 
         // 版本信息读取与渲染（从 config.json 获取）

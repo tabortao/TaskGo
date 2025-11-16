@@ -1357,19 +1357,24 @@ function closeEditTagModal() {
 document.addEventListener('DOMContentLoaded', () => {
     // 点击其他地方关闭标签菜单
     document.addEventListener('click', (event) => {
-        if (!tagMenu.contains(event.target) && !event.target.closest('.task-tag')) {
+        if (!tagMenu) return;
+        const tgt = event.target;
+        const isTaskTag = tgt && typeof tgt.closest === 'function' ? tgt.closest('.task-tag') : null;
+        if (!tagMenu.contains(tgt) && !isTaskTag) {
             closeTagMenu();
         }
     });
 
     // 编辑标签按钮点击事件
-    editTagBtn.addEventListener('click', () => {
-        closeTagMenu();
-        showEditTagModal();
-    });
+    if (editTagBtn) {
+        editTagBtn.addEventListener('click', () => {
+            closeTagMenu();
+            showEditTagModal();
+        });
+    }
 
     // 删除标签按钮点击事件
-    deleteTagBtn.addEventListener('click', async () => {
+    if (deleteTagBtn) deleteTagBtn.addEventListener('click', async () => {
         if (confirm('Are you sure you want to delete this tag?')) {
             try {
                 if (!currentTaskId) {
@@ -1435,7 +1440,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 编辑标签表单提交
-    editTagForm.addEventListener('submit', async (event) => {
+    if (editTagForm) editTagForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const newTagText = editTagInput.value.trim();
         
