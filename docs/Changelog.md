@@ -4,6 +4,16 @@
 
 - 版本信息修改：`web\static\config.json`
 
+## v0.3.1
+
+**Release time:** 2025-11-16
+
+- feat(API): 实现 API Token 管理功能，为 API 令牌添加名称字段以区分不同用途。
+- feat(文档): 更新 iPhone 快捷指令使用说明并改进功能。
+- fix(上传): 按用户 ID 归档任务图片上传目录。
+- feat(UI): 为搜索框添加清除按钮功能。
+- refactor(设置): 改进令牌管理 UI 并添加硬删除功能。
+
 ## v0.3.0
 
 **Release time:** 2025-11-16
