@@ -548,9 +548,10 @@ if (window.matchMedia) {
         const settingsLink = document.getElementById('settings-btn');
         if (settingsLink) {
             settingsLink.addEventListener('click', (e) => {
-                if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+                const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (window.navigator && window.navigator.standalone);
+                if (isStandalone) {
                     e.preventDefault();
-                    window.location.assign('/settings');
+                    window.location.replace('/settings');
                 }
             });
         }
@@ -1257,7 +1258,10 @@ function renderTags() {
             // 当点击标签时，将 currentView 设置为 'all'，确保只显示该标签下的所有任务
             currentView = 'all'; 
             updateFavoritesNavState(); // 更新导航状态以反映 currentView 的变化
-            loadTasks(); // 使用loadTasks替代renderTags和renderTasks，确保数据刷新
+            if (window.innerWidth < 1024) {
+                closeSidebarInstant();
+            }
+            loadTasks();
         });
         
         // 添加右键菜单功能
@@ -2396,6 +2400,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // ...existing code...
 });
 
+function closeSidebarInstant() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('active');
+    if (overlay) {
+        overlay.classList.remove('active');
+        overlay.style.display = 'none';
+        overlay.style.opacity = '0';
+    }
+    document.body.style.removeProperty('overflow');
+}
+
 // PWA Service Worker
 // 任务菜单相关函数
 function showTaskMenu(event, taskId, isPinned) {
@@ -2469,14 +2485,8 @@ function showTaskMenu(event, taskId, isPinned) {
     });
 
     document.getElementById('add-tag-btn').addEventListener('click', () => {
-        console.log('Add Tag button clicked for task:', taskId);
-        const tagName = prompt('请输入标签名称:');
-        console.log('Tag name entered:', tagName);
-        if (tagName && tagName.trim()) {
-            console.log('Calling addTagToTask with:', taskId, tagName.trim());
-            addTagToTask(taskId, tagName.trim());
-        }
         menu.remove();
+        showAddTagModalForTask(taskId);
     });
 
     document.getElementById('delete-task-btn').addEventListener('click', () => {
@@ -3273,4 +3283,58 @@ async function convertImageToWebp(file) {
     } catch {
         return file;
     }
+}
+function getAllUniqueTags() {
+    const set = new Set();
+    allTasks.forEach(t => {
+        if (t.tags) {
+            t.tags.split(',').forEach(x => { const k = x.trim(); if (k) set.add(k); });
+        }
+    });
+    return Array.from(set);
+}
+
+function showAddTagModalForTask(taskId) {
+    const mask = document.createElement('div');
+    mask.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4';
+    const panel = document.createElement('div');
+    panel.className = 'bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl w-full max-w-sm p-4';
+    const input = document.createElement('input');
+    input.className = 'w-full px-3 py-2 bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary';
+    input.placeholder = '输入标签名或选择下方建议';
+    const list = document.createElement('div');
+    list.className = 'mt-3 max-h-40 overflow-y-auto space-y-2';
+    const actions = document.createElement('div');
+    actions.className = 'mt-4 flex justify-end space-x-2';
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'px-3 py-1 rounded border text-secondary hover:bg-background';
+    cancelBtn.textContent = '取消';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'px-3 py-1 rounded bg-primary text-white hover:bg-primary/90';
+    okBtn.textContent = '添加';
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    panel.appendChild(input);
+    panel.appendChild(list);
+    panel.appendChild(actions);
+    mask.appendChild(panel);
+    document.body.appendChild(mask);
+
+    const tags = getAllUniqueTags();
+    tags.forEach(tag => {
+        const btn = document.createElement('button');
+        btn.className = 'px-2 py-1 rounded-md text-xs font-medium border hover:bg-background';
+        btn.textContent = tag;
+        btn.addEventListener('click', () => { input.value = tag; });
+        list.appendChild(btn);
+    });
+
+    const close = () => { if (mask.parentNode) mask.remove(); };
+    cancelBtn.addEventListener('click', close);
+    okBtn.addEventListener('click', async () => {
+        const v = input.value.trim();
+        if (!v) return;
+        await addTagToTask(taskId, v);
+        close();
+    });
 }

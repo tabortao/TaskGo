@@ -50,6 +50,12 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			// 图片上传相关路由
 			authed.POST("/tasks/:id/images", handlers.UploadTaskImages(db))
 			authed.DELETE("/tasks/:id/images", handlers.DeleteTaskImage(db))
+
+			// Token 管理
+			authed.GET("/tokens", handlers.ListTokens(db))
+			authed.POST("/tokens", handlers.CreateToken(db))
+			authed.PUT("/tokens/:id", handlers.UpdateToken(db))
+			authed.DELETE("/tokens/:id", handlers.DeleteToken(db))
 		}
 	}
 

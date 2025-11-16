@@ -169,6 +169,73 @@
                 const grid = document.getElementById('version-grid');
                 grid.innerHTML = `<div class="text-sm text-danger">Failed to load version: ${err}</div>`;
             });
+        // Token 管理
+        const tokenContainer = document.createElement('section');
+        tokenContainer.className = 'bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-sm p-6 mt-6';
+        tokenContainer.innerHTML = `
+            <h2 class="text-sm font-medium text-secondary mb-3">API Tokens</h2>
+            <div class="flex items-center space-x-2 mb-4">
+                <select id="token-duration" class="px-3 py-2 bg-background dark:bg-background-dark border border-border rounded-lg">
+                    <option value="1m">1 Month</option>
+                    <option value="1d">1 Day</option>
+                    <option value="1y">1 Year</option>
+                    <option value="permanent">Permanent</option>
+                </select>
+                <button id="create-token-btn" class="px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">Generate Token</button>
+            </div>
+            <div id="tokens-list" class="space-y-2"></div>
+        `;
+        document.querySelector('main').appendChild(tokenContainer);
+
+        async function loadTokens() {
+            const token = localStorage.getItem('token');
+            const res = await fetch('/api/tokens', { headers: { 'Authorization': `Bearer ${token}` } });
+            const wrap = document.getElementById('tokens-list');
+            wrap.innerHTML = '';
+            if (!res.ok) return;
+            const { data } = await res.json();
+            data.forEach(t => {
+                const row = document.createElement('div');
+                row.className = 'p-3 border border-border rounded-lg bg-background dark:bg-background-dark flex items-center justify-between';
+                const left = document.createElement('div');
+                left.className = 'text-xs break-all';
+                left.textContent = t.Token;
+                const right = document.createElement('div');
+                right.className = 'flex items-center space-x-2';
+                const exp = new Date(t.ExpiresAt).toLocaleString();
+                const expEl = document.createElement('span'); expEl.className = 'text-secondary text-xs'; expEl.textContent = exp;
+                const copyBtn = document.createElement('button'); copyBtn.className = 'px-2 py-1 bg-primary text-white rounded text-xs'; copyBtn.textContent = 'Copy';
+                copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(t.Token); });
+                const revokeBtn = document.createElement('button'); revokeBtn.className = 'px-2 py-1 bg-red-500 text-white rounded text-xs'; revokeBtn.textContent = 'Revoke';
+                revokeBtn.addEventListener('click', async () => {
+                    const token0 = localStorage.getItem('token');
+                    await fetch(`/api/tokens/${t.ID}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token0}` } });
+                    loadTokens();
+                });
+                const updateBtn = document.createElement('button'); updateBtn.className = 'px-2 py-1 bg-blue-500 text-white rounded text-xs'; updateBtn.textContent = 'Update';
+                updateBtn.addEventListener('click', async () => {
+                    const duration = prompt('Duration(1d/1m/1y/permanent):', '1m') || '1m';
+                    const token0 = localStorage.getItem('token');
+                    await fetch(`/api/tokens/${t.ID}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token0}` }, body: JSON.stringify({ duration }) });
+                    loadTokens();
+                });
+                right.appendChild(expEl);
+                right.appendChild(copyBtn);
+                right.appendChild(updateBtn);
+                right.appendChild(revokeBtn);
+                row.appendChild(left); row.appendChild(right);
+                wrap.appendChild(row);
+            });
+        }
+
+        document.getElementById('create-token-btn').addEventListener('click', async () => {
+            const token = localStorage.getItem('token');
+            const duration = document.getElementById('token-duration').value;
+            const res = await fetch('/api/tokens', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ duration }) });
+            if (res.ok) loadTokens();
+        });
+
+        loadTokens();
     });
     </script>
 </body>

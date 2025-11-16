@@ -22,7 +22,7 @@ func ConnectDatabase() {
 		panic(fmt.Sprintf("Failed to connect to database: %v", err))
 	}
 
-	err = database.AutoMigrate(&models.User{}, &models.Task{}, &models.Comment{})
+    err = database.AutoMigrate(&models.User{}, &models.Task{}, &models.Comment{}, &models.APIToken{})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to migrate database: %v", err))
 	}
