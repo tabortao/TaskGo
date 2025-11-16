@@ -1,10 +1,11 @@
 # iPhone 快捷指令用法（概述步骤）
 
-- 准备：在设置页生成一个 API Token，复制保存。
-- 创建快捷指令：
-  - 动作 1：获取剪贴板文本
-  - 动作 2：获取 http://localhost:8080/api/tasks （ GET ， Authorization: Bearer <token> ），解析返回任务中的标签，去重作为选项
-  - 动作 3：让用户从标签列表中选择一个标签
-  - 动作 4：向 POST http://localhost:8080/api/tasks 发送 JSON {"content": "<剪贴板文本>", "tags": "<选择的标签>"} ，头部 Authorization: Bearer <token> ， Content-Type: application/json
-  - 可绑定“轻点背面”触发：在 iOS 设置 → 辅助功能 → 触控 → 轻点背面，对应选择该快捷指令
-- 注意：如果部署到非本机，请替换为实际域名；Token 吊销后需更新到快捷指令。
+- 功能目标：剪贴板为空时提示输入内容，选择标签后发送到 TaskGo。
+- 流程（iPhone 快捷指令内）：
+- 取剪贴板，如果为空，用“询问文本”提示用户输入；将结果保存为变量 content 。
+- 请求 GET https://你的域名/api/tasks （加 Authorization: Bearer <token> ），解析响应中的 tags 字段去重，作为“从列表中选择”的选项。
+- 用户选择标签后，发送 POST https://你的域名/api/tasks ，Body： {"content": "<content>", "tags": "<选中的标签>"} ，头部同上。
+- 绑定“轻点背面”：设置 → 辅助功能 → 触控 → 轻点背面 → 选择该快捷指令。
+- 备注：
+- 令牌生成与复制在设置页完成。
+- 本地运行时用 http://localhost:8080 ；部署后替换为外网域名。

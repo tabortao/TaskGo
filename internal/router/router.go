@@ -56,6 +56,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 			authed.POST("/tokens", handlers.CreateToken(db))
 			authed.PUT("/tokens/:id", handlers.UpdateToken(db))
 			authed.DELETE("/tokens/:id", handlers.DeleteToken(db))
+			authed.DELETE("/tokens/:id/hard", handlers.DeleteTokenHard(db))
 		}
 	}
 

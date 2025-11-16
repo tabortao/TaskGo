@@ -1980,8 +1980,6 @@ async function toggleTaskFavorite(id, favorite) {
 }
 
 async function deleteTask(id) {
-    if (!confirm('确定要删除这个任务吗？')) return;
-
     const token = localStorage.getItem('token');
     try {
         const res = await fetch(`/api/tasks/${id}`, {
@@ -2447,7 +2445,7 @@ function showTaskMenu(event, taskId, isPinned) {
             </svg>
             <span>${pinText}</span>
         </button>
-        <button id="add-tag-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
+        <button id="task-menu-add-tag-btn" class="w-full px-4 py-2 text-left text-sm hover:bg-background flex items-center space-x-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
             </svg>
@@ -2484,14 +2482,14 @@ function showTaskMenu(event, taskId, isPinned) {
         menu.remove();
     });
 
-    document.getElementById('add-tag-btn').addEventListener('click', () => {
+    document.getElementById('task-menu-add-tag-btn').addEventListener('click', () => {
         menu.remove();
         showAddTagModalForTask(taskId);
     });
 
     document.getElementById('delete-task-btn').addEventListener('click', () => {
-        deleteTask(taskId);
         menu.remove();
+        showDeleteTaskModal(taskId);
     });
 
     // 点击外部关闭菜单
@@ -2664,8 +2662,27 @@ function showCommentModal(taskId) {
         if (input.value.trim()) {
             addComment(taskId, input.value.trim());
             input.value = '';
-        }
-    });
+    }
+
+    // 搜索清除按钮
+    const desktopInput = document.getElementById('search-input');
+    const desktopClear = document.getElementById('search-clear-btn');
+    const mobileInput = document.getElementById('mobile-search-input');
+    const mobileClear = document.getElementById('mobile-search-clear-btn');
+    const toggleClear = (inp, btn) => { if (inp && btn) btn.classList.toggle('hidden', !inp.value); };
+    const bindClear = (inp, btn, other) => {
+        if (!inp || !btn) return;
+        inp.addEventListener('input', () => { toggleClear(inp, btn); });
+        btn.addEventListener('click', () => {
+            inp.value = '';
+            toggleClear(inp, btn);
+            if (other) syncSearchInputs(inp, other);
+        });
+        toggleClear(inp, btn);
+    };
+    bindClear(desktopInput, desktopClear, document.getElementById('mobile-search-input'));
+    bindClear(mobileInput, mobileClear, document.getElementById('search-input'));
+});
 
     // 点击外部关闭模态框
     modal.addEventListener('click', (e) => {
@@ -3337,4 +3354,21 @@ function showAddTagModalForTask(taskId) {
         await addTagToTask(taskId, v);
         close();
     });
+}
+function showDeleteTaskModal(taskId) {
+    const mask = document.createElement('div');
+    mask.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4';
+    const panel = document.createElement('div');
+    panel.className = 'bg-surface dark:bg-surface-dark border border-border dark:border-border-dark rounded-xl shadow-xl w-full max-w-sm p-6';
+    const title = document.createElement('h3'); title.className = 'text-lg font-semibold mb-2'; title.textContent = 'Delete Task';
+    const msg = document.createElement('p'); msg.className = 'text-sm text-secondary'; msg.textContent = 'Are you sure you want to delete this task? This action cannot be undone.';
+    const actions = document.createElement('div'); actions.className = 'mt-6 flex justify-end space-x-3';
+    const cancelBtn = document.createElement('button'); cancelBtn.className = 'px-3 py-2 rounded border text-secondary hover:bg-background'; cancelBtn.textContent = 'Cancel';
+    const delBtn = document.createElement('button'); delBtn.className = 'px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700'; delBtn.textContent = 'Delete';
+    actions.appendChild(cancelBtn); actions.appendChild(delBtn);
+    panel.appendChild(title); panel.appendChild(msg); panel.appendChild(actions);
+    mask.appendChild(panel); document.body.appendChild(mask);
+    const close = () => { if (mask.parentNode) mask.remove(); };
+    cancelBtn.addEventListener('click', close);
+    delBtn.addEventListener('click', async () => { await deleteTask(taskId); close(); });
 }

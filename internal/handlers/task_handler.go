@@ -292,8 +292,8 @@ func UploadTaskImages(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 创建上传目录
-		uploadDir := filepath.Join("web", "static", "uploads", "tasks")
+        // 创建上传目录（按用户ID归档）
+        uploadDir := filepath.Join("web", "static", "uploads", "tasks", fmt.Sprintf("%v", userID))
 		if err := os.MkdirAll(uploadDir, 0755); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create upload directory"})
 			return
@@ -320,7 +320,7 @@ func UploadTaskImages(db *gorm.DB) gin.HandlerFunc {
 			// 生成新文件名：年月日-原文件名
 			originalName := strings.TrimSuffix(file.Filename, ext)
 			newFileName := fmt.Sprintf("%s-%s%s", currentDate, originalName, ext)
-			filePath := filepath.Join(uploadDir, newFileName)
+            filePath := filepath.Join(uploadDir, newFileName)
 
 			// 如果文件已存在，添加序号
 			counter := 1
@@ -340,8 +340,8 @@ func UploadTaskImages(db *gorm.DB) gin.HandlerFunc {
 			}
 
 			// 添加到图片路径列表（存储相对路径）
-			relativePath := "/static/uploads/tasks/" + newFileName
-			imagePaths = append(imagePaths, relativePath)
+            relativePath := "/static/uploads/tasks/" + fmt.Sprintf("%v", userID) + "/" + newFileName
+            imagePaths = append(imagePaths, relativePath)
 		}
 
 		// 更新任务的图片字段

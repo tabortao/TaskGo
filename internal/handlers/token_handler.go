@@ -91,3 +91,15 @@ func DeleteToken(db *gorm.DB) gin.HandlerFunc {
         c.JSON(http.StatusOK, gin.H{"message":"Token revoked"})
     }
 }
+
+// 硬删除Token记录
+func DeleteTokenHard(db *gorm.DB) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        userID, _ := c.Get("userID")
+        if err := db.Where("id = ? AND user_id = ?", c.Param("id"), userID).Delete(&models.APIToken{}).Error; err != nil {
+            c.JSON(http.StatusInternalServerError, gin.H{"error":"Failed to delete token"})
+            return
+        }
+        c.JSON(http.StatusOK, gin.H{"message":"Token deleted"})
+    }
+}
