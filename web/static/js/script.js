@@ -76,7 +76,7 @@ function initImageUpload() {
 }
 
 // 处理图片选择
-function handleImageSelection(files, isMobile) {
+async function handleImageSelection(files, isMobile) {
     const maxFileSize = 5 * 1024 * 1024; // 5MB
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
@@ -102,7 +102,8 @@ function handleImageSelection(files, isMobile) {
             continue;
         }
 
-        selectedImages.push(file);
+        const converted = await convertImageToWebp(file);
+        selectedImages.push(converted);
     }
 
     // 更新预览
@@ -1602,7 +1603,7 @@ function updateFavoritesNavState() {
 function createTaskElement(task) {
     const taskEl = document.createElement('li');
     taskEl.dataset.id = task.ID;
-    let className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-2 border border-border/50 rounded-lg`;
+    let className = `group p-4 hover:bg-background/50 transition-colors ${task.completed ? 'completed' : ''} mb-2 mx-1 border border-border/50 rounded-lg`;
     if (task.pinned) {
         className += ' pinned';
     }
@@ -2018,9 +2019,16 @@ function editTaskContent(span, id) {
     // 移动端编辑优化：滚动到顶部并留出输入法空间
     const taskItem = textarea.closest('li');
     if (taskItem && 'ontouchstart' in window) {
+        const mf = document.getElementById('mobile-task-form');
+        const fh = mf ? mf.getBoundingClientRect().height : 0;
         taskItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
         setTimeout(() => {
-            window.scrollBy({ top: -120, behavior: 'smooth' });
+            const rect = taskItem.getBoundingClientRect();
+            const targetBottom = window.innerHeight - fh - 16;
+            if (rect.bottom > targetBottom) {
+                const delta = rect.bottom - targetBottom;
+                window.scrollBy({ top: delta, behavior: 'smooth' });
+            }
         }, 120);
     }
 
@@ -2314,6 +2322,58 @@ document.addEventListener('DOMContentLoaded', () => {
             const st = Math.max(mainEl.scrollTop || 0, window.scrollY || 0, document.documentElement.scrollTop || 0);
             toTopBtn.classList.toggle('hidden', st < 100);
         };
+        const setInitialBtnPosition = () => {
+            const saved = localStorage.getItem('toTopBtnPos');
+            if (saved) {
+                try {
+                    const pos = JSON.parse(saved);
+                    toTopBtn.style.left = pos.left + 'px';
+                    toTopBtn.style.top = pos.top + 'px';
+                    toTopBtn.style.bottom = 'auto';
+                    toTopBtn.style.right = 'auto';
+                    return;
+                } catch {}
+            }
+            const mf = document.getElementById('mobile-task-form');
+            const fh = mf ? mf.getBoundingClientRect().height : 0;
+            const defaultBottom = fh ? (fh + 16) : 24;
+            toTopBtn.style.bottom = defaultBottom + 'px';
+            toTopBtn.style.right = '24px';
+        };
+        setInitialBtnPosition();
+
+        const startDrag = (clientX, clientY) => {
+            const rect = toTopBtn.getBoundingClientRect();
+            const offsetX = clientX - rect.left;
+            const offsetY = clientY - rect.top;
+            const move = (x, y) => {
+                let nx = x - offsetX;
+                let ny = y - offsetY;
+                nx = Math.max(0, Math.min(window.innerWidth - rect.width, nx));
+                ny = Math.max(0, Math.min(window.innerHeight - rect.height, ny));
+                toTopBtn.style.left = nx + 'px';
+                toTopBtn.style.top = ny + 'px';
+                toTopBtn.style.bottom = 'auto';
+                toTopBtn.style.right = 'auto';
+            };
+            const onMouseMove = (e) => move(e.clientX, e.clientY);
+            const onTouchMove = (e) => { const t = e.touches[0]; move(t.clientX, t.clientY); };
+            const end = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', end);
+                document.removeEventListener('touchmove', onTouchMove);
+                document.removeEventListener('touchend', end);
+                const rect2 = toTopBtn.getBoundingClientRect();
+                localStorage.setItem('toTopBtnPos', JSON.stringify({ left: rect2.left, top: rect2.top }));
+            };
+            document.addEventListener('mousemove', onMouseMove, { passive: true });
+            document.addEventListener('mouseup', end);
+            document.addEventListener('touchmove', onTouchMove, { passive: true });
+            document.addEventListener('touchend', end);
+        };
+        toTopBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startDrag(e.clientX, e.clientY); });
+        toTopBtn.addEventListener('touchstart', (e) => { const t = e.touches[0]; startDrag(t.clientX, t.clientY); }, { passive: true });
+
         mainEl.addEventListener('scroll', toggleToTop, { passive: true });
         window.addEventListener('scroll', toggleToTop, { passive: true });
         toTopBtn.addEventListener('click', () => {
@@ -3193,3 +3253,24 @@ if ('serviceWorker' in navigator) {
             logEvent('settings_save', { theme: selectedTheme ? selectedTheme.value : null });
         });
     }
+async function convertImageToWebp(file) {
+    try {
+        if (file.type === 'image/webp') return file;
+        if (file.type === 'image/gif') return file;
+        const bitmap = await createImageBitmap(file).catch(() => null);
+        if (!bitmap) return file;
+        const canvas = document.createElement('canvas');
+        canvas.width = bitmap.width;
+        canvas.height = bitmap.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(bitmap, 0, 0);
+        const blob = await new Promise((resolve, reject) => {
+            canvas.toBlob((b) => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', 0.85);
+        }).catch(() => null);
+        if (!blob) return file;
+        const webpFile = new File([blob], (file.name.replace(/\.[^.]+$/, '') || 'image') + '.webp', { type: 'image/webp' });
+        return webpFile;
+    } catch {
+        return file;
+    }
+}
