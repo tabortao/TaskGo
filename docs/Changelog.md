@@ -4,6 +4,12 @@
 
 - 版本信息修改：`web\static\config.json`
 
+## v0.3.3
+
+**Release time:** 2025-11-17
+
+- feat: 添加任务内容展开/收起功能并优化图片压缩。
+
 ## v0.3.2
 
 **Release time:** 2025-11-16

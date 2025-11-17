@@ -1689,19 +1689,34 @@ function createTaskElement(task) {
     content.className = 'break-words whitespace-pre-wrap mb-2';
     const contentText = document.createElement('span');
     contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
-    if (currentSearchQuery && currentSearchQuery.trim()) {
-        const query = currentSearchQuery.trim();
-        const escapeHTML = (s) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-        const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const safe = escapeHTML(task.content);
-        const re = new RegExp(escapeRegExp(query), 'gi');
-        const highlighted = safe.replace(re, (m) => `<span class="bg-yellow-200 dark:bg-yellow-600/60 text-gray-900 dark:text-white rounded px-0.5">${m}</span>`);
-        contentText.innerHTML = highlighted;
-    } else {
-        contentText.textContent = task.content;
-    }
+    const fullText = task.content || '';
+    const limit = 200;
+    let expanded = false;
+    const escapeHTML = (s) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const highlight = (s) => {
+        if (!currentSearchQuery || !currentSearchQuery.trim()) return escapeHTML(s);
+        const re = new RegExp(escapeRegExp(currentSearchQuery.trim()), 'gi');
+        return escapeHTML(s).replace(re, (m) => `<span class="bg-yellow-200 dark:bg-yellow-600/60 text-gray-900 dark:text-white rounded px-0.5">${m}</span>`);
+    };
+    const renderContent = () => {
+        const visible = expanded ? fullText : fullText.slice(0, limit);
+        contentText.innerHTML = highlight(visible) + (expanded || fullText.length <= limit ? '' : '…');
+    };
+    renderContent();
     contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
     content.appendChild(contentText);
+    if (fullText.length > limit) {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'text-xs text-primary hover:underline ml-2';
+        toggleBtn.textContent = 'Show more';
+        toggleBtn.addEventListener('click', () => {
+            expanded = !expanded;
+            toggleBtn.textContent = expanded ? 'Show less' : 'Show more';
+            renderContent();
+        });
+        content.appendChild(toggleBtn);
+    }
 
     // 标签容器
     const tagsContainer = document.createElement('div');
@@ -3302,16 +3317,37 @@ async function convertImageToWebp(file) {
         const bitmap = await createImageBitmap(file).catch(() => null);
         if (!bitmap) return file;
         const canvas = document.createElement('canvas');
-        canvas.width = bitmap.width;
-        canvas.height = bitmap.height;
+        const maxSide = 1920;
+        let w = bitmap.width;
+        let h = bitmap.height;
+        if (w > maxSide || h > maxSide) {
+            const ratio = Math.min(maxSide / w, maxSide / h);
+            w = Math.max(1, Math.floor(w * ratio));
+            h = Math.max(1, Math.floor(h * ratio));
+        }
+        canvas.width = w;
+        canvas.height = h;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(bitmap, 0, 0);
-        const blob = await new Promise((resolve, reject) => {
-            canvas.toBlob((b) => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', 0.85);
-        }).catch(() => null);
-        if (!blob) return file;
-        const webpFile = new File([blob], (file.name.replace(/\.[^.]+$/, '') || 'image') + '.webp', { type: 'image/webp' });
-        return webpFile;
+        ctx.drawImage(bitmap, 0, 0, w, h);
+        const qualities = [0.7, 0.6, 0.5];
+        let best = null;
+        for (let i = 0; i < qualities.length; i++) {
+            const q = qualities[i];
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob((b) => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', q);
+            }).catch(() => null);
+            if (!blob) continue;
+            if (!best || blob.size < best.size) best = blob;
+            if (blob.size < file.size) {
+                const name = (file.name.replace(/\.[^.]+$/, '') || 'image') + '.webp';
+                return new File([blob], name, { type: 'image/webp' });
+            }
+        }
+        if (best && best.size < file.size) {
+            const name = (file.name.replace(/\.[^.]+$/, '') || 'image') + '.webp';
+            return new File([best], name, { type: 'image/webp' });
+        }
+        return file;
     } catch {
         return file;
     }
