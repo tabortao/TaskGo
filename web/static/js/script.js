@@ -1690,7 +1690,7 @@ function createTaskElement(task) {
     const contentText = document.createElement('span');
     contentText.className = `text-base ${task.completed ? 'text-secondary' : ''}`;
     const fullText = task.content || '';
-    const limit = 200;
+    const limit = 150;
     let expanded = false;
     const escapeHTML = (s) => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
