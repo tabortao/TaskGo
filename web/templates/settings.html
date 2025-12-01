@@ -14,6 +14,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="/static/js/tailwind_config.js"></script>
     <link rel="stylesheet" href="/static/css/theme.css">
+    <script src="https://cdn.jsdelivr.net/gh/WangYuLue/image-conversion/build/conversion.js"></script>
     <script src="/static/js/script.js" defer></script>
 </head>
 <body class="bg-background dark:bg-background-dark text-gray-800 dark:text-secondary-200 antialiased min-h-[100dvh]">
@@ -82,7 +83,13 @@
 
     <script>
     // 主题应用与系统偏好
-    let currentTheme = localStorage.getItem('theme-mode') || 'system';
+    // Ensure currentTheme is declared only once or reuse it if already declared globally
+    if (typeof currentTheme === 'undefined') {
+        var currentTheme = localStorage.getItem('theme-mode') || 'system';
+    } else {
+        currentTheme = localStorage.getItem('theme-mode') || 'system';
+    }
+
     function applyTheme(theme) {
         localStorage.setItem('theme-mode', theme);
         currentTheme = theme;
@@ -112,6 +119,48 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         applyTheme(currentTheme);
+        
+        // 定义图片压缩函数
+        async function convertImageToWebp(file) {
+            if (!window.imageConversion) return file;
+            try {
+                const res = await imageConversion.compress(file, {
+                    quality: 0.6,
+                    type: "image/webp",
+                    width: 400, // Avatars can be smaller
+                    height: 400,
+                    orientation: true,
+                });
+                return new File([res], file.name.replace(/\.[^.]+$/, ".webp"), {
+                    type: "image/webp",
+                    lastModified: Date.now(),
+                });
+            } catch (e) {
+                console.error("Image compression failed:", e);
+                return file;
+            }
+        }
+
+        // Load current user info
+        async function loadUserInfo() {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const res = await fetch('/api/user', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const { data } = await res.json();
+                    if (data.avatar_url) {
+                        document.getElementById('current-avatar').src = data.avatar_url;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load user info', e);
+            }
+        }
+        loadUserInfo();
+
         const radio = document.querySelector(`input[name="theme-mode"][value="${currentTheme}"]`);
         if (radio) radio.checked = true;
         document.querySelectorAll('input[name="theme-mode"]').forEach(r => {
@@ -127,6 +176,61 @@
         document.getElementById('choose-avatar-btn').addEventListener('click', () => {
             document.getElementById('avatar-input').click();
         });
+        
+        // Avatar immediate preview and compression
+        document.getElementById('avatar-input').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit check before compression
+                showDialog('Upload Avatar', 'Image size must be less than 5MB');
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            // Show loading state or simple preview immediately?
+            // Ideally, compress then show preview.
+            const currentAvatar = document.getElementById('current-avatar');
+            const originalSrc = currentAvatar.src;
+            
+            // Temporarily show loading or keep original
+            // currentAvatar.style.opacity = '0.5'; 
+
+            try {
+                const converted = typeof convertImageToWebp === 'function' ? await convertImageToWebp(file) : file;
+                
+                // Update preview with compressed image
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    currentAvatar.src = e.target.result;
+                };
+                reader.readAsDataURL(converted);
+
+                // Automatically submit the form or prepare for submission?
+                // The user requirement says "Select image -> immediately compress & convert -> show preview".
+                // It doesn't explicitly say "upload immediately", but usually "show preview" implies waiting for user confirmation or auto-upload.
+                // Given "immediately compress ... and show preview", I will assume we update the preview. 
+                // The form still has a "Upload avatar" button. 
+                // However, typically modern UX uploads immediately or just prepares the file.
+                // The previous code handled submit. Let's keep the submit button for final confirmation/upload to server, 
+                // BUT the requirement says "Profile Settings，选择图片后，立刻进行压缩转换并显示预览".
+                // It also says "修改项目头像上传...".
+                // Let's update the file input logic to replace the file object if possible, or store the compressed file for the submit handler.
+                
+                // Store compressed file in a property for the submit handler to use
+                document.getElementById('avatar-form').dataset.compressedFile = "true";
+                // We can't easily replace file input files. We'll handle the actual upload in the submit handler using the same compression logic 
+                // OR we can store the blob. 
+                // Better: Modify submit handler to re-compress (fast enough) OR reuse if we cache it.
+                // Actually, simpler: The submit handler already calls convertImageToWebp. 
+                // So we just need to update the preview here.
+                
+            } catch (err) {
+                console.error('Preview generation failed', err);
+                showDialog('Error', 'Failed to process image preview');
+            }
+        });
+
         function showDialog(title, message, options) {
             const mask = document.createElement('div');
             mask.className = 'fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4';
@@ -151,7 +255,14 @@
             e.preventDefault();
             const file = document.getElementById('avatar-input').files[0];
             if (!file) { showDialog('Upload Avatar', 'Please select a picture'); return; }
-            if (file.size > 1 * 1024 * 1024) { showDialog('Upload Avatar', 'Image size must be less than 1MB'); return; }
+            
+            // Check size again (though input change also checks, user might drag drop or bypass)
+            // Note: The converted file might be smaller, but we check original first for sanity.
+            // Actually, we should check the converted size if possible, but we don't have it yet unless we re-compress.
+            // Given the flow, we'll compress and then upload.
+            
+            if (file.size > 5 * 1024 * 1024) { showDialog('Upload Avatar', 'Image size must be less than 5MB'); return; }
+            
             const formData = new FormData();
             const converted = typeof convertImageToWebp === 'function' ? await convertImageToWebp(file) : file;
             formData.append('avatar', converted);

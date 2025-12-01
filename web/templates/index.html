@@ -25,6 +25,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="/static/js/tailwind_config.js"></script>
     <link rel="stylesheet" href="/static/css/theme.css">
+    <script src="https://cdn.jsdelivr.net/gh/WangYuLue/image-conversion/build/conversion.js"></script>
 </head>
 <body class="bg-background dark:bg-background-dark text-gray-800 dark:text-secondary-200 antialiased">
     <!-- 登录/注册界面 -->
@@ -214,7 +215,7 @@
             </div>
             <div class="p-4 border-t border-border sidebar-full">
                 <div class="flex space-x-2">
-                    <a href="/settings" target="_self" id="settings-btn" class="text-sm text-secondary hover:text-gray-700 active:scale-95 transition-transform">Settings</a>
+                    <a href="/settings" onclick="event.preventDefault(); window.location.href='/settings';" id="settings-btn" class="text-sm text-secondary hover:text-gray-700 active:scale-95 transition-transform cursor-pointer">Settings</a>
                     <span class="text-border">|</span>
                     <a href="#" id="logout-link" class="text-sm text-secondary hover:text-gray-700 active:scale-95 transition-transform">Logout</a>
                 </div>

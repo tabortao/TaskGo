@@ -1704,6 +1704,7 @@ function createTaskElement(task) {
         contentText.innerHTML = highlight(visible) + (expanded || fullText.length <= limit ? '' : '…');
     };
     renderContent();
+    contentText.style.touchAction = 'manipulation';
     contentText.addEventListener('dblclick', () => editTaskContent(contentText, task.ID));
     content.appendChild(contentText);
     if (fullText.length > limit) {
@@ -3311,44 +3312,25 @@ if ('serviceWorker' in navigator) {
         });
     }
 async function convertImageToWebp(file) {
+    if (!window.imageConversion) return file;
     try {
-        if (file.type === 'image/webp') return file;
-        if (file.type === 'image/gif') return file;
-        const bitmap = await createImageBitmap(file).catch(() => null);
-        if (!bitmap) return file;
-        const canvas = document.createElement('canvas');
-        const maxSide = 1920;
-        let w = bitmap.width;
-        let h = bitmap.height;
-        if (w > maxSide || h > maxSide) {
-            const ratio = Math.min(maxSide / w, maxSide / h);
-            w = Math.max(1, Math.floor(w * ratio));
-            h = Math.max(1, Math.floor(h * ratio));
-        }
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(bitmap, 0, 0, w, h);
-        const qualities = [0.7, 0.6, 0.5];
-        let best = null;
-        for (let i = 0; i < qualities.length; i++) {
-            const q = qualities[i];
-            const blob = await new Promise((resolve, reject) => {
-                canvas.toBlob((b) => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/webp', q);
-            }).catch(() => null);
-            if (!blob) continue;
-            if (!best || blob.size < best.size) best = blob;
-            if (blob.size < file.size) {
-                const name = (file.name.replace(/\.[^.]+$/, '') || 'image') + '.webp';
-                return new File([blob], name, { type: 'image/webp' });
-            }
-        }
-        if (best && best.size < file.size) {
-            const name = (file.name.replace(/\.[^.]+$/, '') || 'image') + '.webp';
-            return new File([best], name, { type: 'image/webp' });
-        }
-        return file;
-    } catch {
+        // Compress to a target size of around 200KB for better space saving while maintaining visibility
+        // or use quality 0.6 for aggressive compression.
+        // "compress to minimal size while being visible" -> quality 0.6 is usually safe for webp.
+        const res = await imageConversion.compress(file, {
+            quality: 0.6, // Reduced from 0.8
+            type: "image/webp",
+            width: 800, // Resize large images. 800px width is usually enough for tasks/avatars.
+            height: 800,
+            orientation: true,
+            scale: 0.8, // Initial scale if not using width/height
+        });
+        return new File([res], file.name.replace(/\.[^.]+$/, ".webp"), {
+            type: "image/webp",
+            lastModified: Date.now(),
+        });
+    } catch (e) {
+        console.error("Image compression failed:", e);
         return file;
     }
 }

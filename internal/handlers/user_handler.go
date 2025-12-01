@@ -80,8 +80,8 @@ func UploadAvatar(db *gorm.DB) gin.HandlerFunc {
             return
         }
 
-        if file.Size > 1*1024*1024 { // 1MB
-            c.JSON(http.StatusBadRequest, gin.H{"error": "File size exceeds 1MB"})
+        if file.Size > 5*1024*1024 { // 5MB
+            c.JSON(http.StatusBadRequest, gin.H{"error": "File size exceeds 5MB"})
             return
         }
 
